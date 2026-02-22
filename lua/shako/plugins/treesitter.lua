@@ -7,11 +7,17 @@ return {
 		-- configure treesitter
 		local ts = require("nvim-treesitter")
 
-		ts.setup({
+		local setup_opts = {
 			highlight = { enable = true },
 			indent = { enable = true },
-			compilers = { "gcc" },
-		})
+		}
+
+		-- Windows: tree-sitter CLI defaults to cl.exe (MSVC); force gcc instead
+		if vim.fn.has("win32") == 1 then
+			setup_opts.compilers = { "gcc" }
+		end
+
+		ts.setup(setup_opts)
 
 		local parsers = {
 			"json",
