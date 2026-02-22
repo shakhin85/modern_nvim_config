@@ -1,3 +1,5 @@
+vim.env.CC = "gcc"
+
 vim.opt.termguicolors = true
 vim.opt.tgc = true
 

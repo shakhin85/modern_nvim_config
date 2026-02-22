@@ -10,6 +10,7 @@ return {
 		ts.setup({
 			highlight = { enable = true },
 			indent = { enable = true },
+			compilers = { "gcc" },
 		})
 
 		local parsers = {
