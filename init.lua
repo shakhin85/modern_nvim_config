@@ -109,7 +109,8 @@ local function get_uv_python()
 	local uv_available = vim.fn.executable("uv") == 1
 
 	if uv_available then
-		local handle = io.popen("uv python find 2>nul") -- suppress errors on Windows
+		local redirect = vim.fn.has("win32") == 1 and "2>nul" or "2>/dev/null"
+		local handle = io.popen("uv python find " .. redirect)
 		if handle then
 			local result = handle:read("*a")
 			handle:close()
