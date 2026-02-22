@@ -43,9 +43,6 @@ keymap.set("n", "<leader>ba", ":bufdo bd<CR>", { desc = "Delete all buffers" })
 keymap.set("n", "<leader>bo", ":only<CR>", { desc = "Keep only current window" })
 keymap.set("n", "<leader>bs", ":ls<CR>", { desc = "Show buffer list" })
 
--- ToggleTerm clear terminal (moved to avoid conflict with tab commands)
-keymap.set("n", "<leader>tcc", ":TermExec cmd='clear'<CR>", { desc = "Clear terminal" })
-
 -- Debug keymaps - removed to avoid conflicts with nvim-dap plugin
 -- DAP plugin handles all F-key bindings for debugging
 

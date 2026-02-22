@@ -39,22 +39,33 @@ return {
 		toggle = { enabled = true },
 		-- notifier intentionally disabled — noice.nvim + nvim-notify handle this
 		notifier = { enabled = false },
+		-- Floating terminal (shell auto-detected: pwsh on Windows, $SHELL on Linux)
+		terminal = {
+			enabled = true,
+			win = {
+				style = "terminal",
+				position = "float",
+				border = "rounded",
+				height = 0.8,
+				width = 0.8,
+			},
+		},
 		-- Startup dashboard
 		dashboard = {
 			enabled = true,
 			preset = {
 				keys = {
-					{ icon = " ", key = "f", desc = "Find File",       action = ":Telescope find_files" },
-					{ icon = " ", key = "r", desc = "Recent Files",    action = ":Telescope oldfiles" },
-					{ icon = " ", key = "g", desc = "Find Text",       action = ":Telescope live_grep" },
+					{ icon = " ", key = "f", desc = "Find File", action = ":Telescope find_files" },
+					{ icon = " ", key = "r", desc = "Recent Files", action = ":Telescope oldfiles" },
+					{ icon = " ", key = "g", desc = "Find Text", action = ":Telescope live_grep" },
 					{ icon = " ", key = "s", desc = "Restore Session", action = ":lua require('persistence').load()" },
-					{ icon = "󰒲 ", key = "l", desc = "Lazy",            action = ":Lazy" },
-					{ icon = " ", key = "q", desc = "Quit",            action = ":qa" },
+					{ icon = "󰒲 ", key = "l", desc = "Lazy", action = ":Lazy" },
+					{ icon = " ", key = "q", desc = "Quit", action = ":qa" },
 				},
 			},
 			sections = {
 				{ section = "header" },
-				{ section = "keys",   gap = 1, padding = 1 },
+				{ section = "keys", gap = 1, padding = 1 },
 				{ section = "recent_files", indent = 2, padding = 1 },
 				{ section = "startup" },
 			},
@@ -76,9 +87,41 @@ return {
 		})
 	end,
 	keys = {
-		{ "<leader>lg", function() Snacks.lazygit() end,   desc = "Open LazyGit" },
-		{ "<leader>gb", function() Snacks.gitbrowse() end, desc = "Git browse in browser" },
-		{ "<leader>z",  function() Snacks.zen() end,       desc = "Toggle zen mode" },
-		{ "<leader>bd", function() Snacks.bufdelete() end, desc = "Delete buffer" },
+		{
+			"<leader>lg",
+			function()
+				Snacks.lazygit()
+			end,
+			desc = "Open LazyGit",
+		},
+		{
+			"<leader>gb",
+			function()
+				Snacks.gitbrowse()
+			end,
+			desc = "Git browse in browser",
+		},
+		{
+			"<leader>z",
+			function()
+				Snacks.zen()
+			end,
+			desc = "Toggle zen mode",
+		},
+		{
+			"<leader>bd",
+			function()
+				Snacks.bufdelete()
+			end,
+			desc = "Delete buffer",
+		},
+		{
+			"<leader>tt",
+			function()
+				Snacks.terminal()
+			end,
+			desc = "Toggle terminal",
+			mode = { "n", "t" },
+		},
 	},
 }
