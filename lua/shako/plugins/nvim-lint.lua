@@ -4,7 +4,6 @@ return {
   config = function()
     local lint = require("lint")
 
-    -- Install linters via Mason: eslint_d, pylint
     lint.linters_by_ft = {
       javascript = { "eslint_d" },
       typescript = { "eslint_d" },
@@ -12,6 +11,7 @@ return {
       typescriptreact = { "eslint_d" },
       svelte = { "eslint_d" },
       python = { "pylint" },
+      dockerfile = { "hadolint" },
     }
 
     local lint_augroup = vim.api.nvim_create_augroup("lint", { clear = true })

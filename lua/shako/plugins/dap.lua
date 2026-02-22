@@ -70,6 +70,23 @@ return {
 				}
 			end
 
+			-- Go (delve adapter auto-configured by mason-nvim-dap)
+			dap.configurations.go = {
+				{
+					type = "delve",
+					name = "Debug",
+					request = "launch",
+					program = "${file}",
+				},
+				{
+					type = "delve",
+					name = "Debug test (go.mod)",
+					request = "launch",
+					mode = "test",
+					program = "./${relativeFileDirname}",
+				},
+			}
+
 			-- Keymaps
 			-- Execution flow — F-keys
 			keymap.set("n", "<F5>", dap.continue, { desc = "DAP: Continue / Launch" })
@@ -91,7 +108,7 @@ return {
 		"jay-babu/mason-nvim-dap.nvim",
 		dependencies = "williamboman/mason.nvim",
 		opts = {
-			ensure_installed = { "python", "js" },
+			ensure_installed = { "python", "js", "codelldb", "delve" },
 			handlers = {},
 		},
 	},

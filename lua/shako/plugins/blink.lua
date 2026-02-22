@@ -1,7 +1,10 @@
 return {
   "saghen/blink.cmp",
   -- optional: provides snippets for the snippet source
-  dependencies = { "rafamadriz/friendly-snippets" },
+  dependencies = {
+    "rafamadriz/friendly-snippets",
+    "saghen/blink.compat",
+  },
 
   -- use a release tag to download pre-built binaries
   version = "v0.*",
@@ -34,6 +37,19 @@ return {
     -- elsewhere in your config, without redefining it, via `opts_extend`
     sources = {
       default = { "lsp", "path", "snippets", "buffer" },
+      per_filetype = {
+        sql = { "dadbod", "lsp", "path", "snippets", "buffer" },
+        mysql = { "dadbod", "lsp", "path", "snippets", "buffer" },
+        plsql = { "dadbod", "lsp", "path", "snippets", "buffer" },
+        sqlite = { "dadbod", "lsp", "path", "snippets", "buffer" },
+      },
+      providers = {
+        dadbod = {
+          name = "Dadbod",
+          module = "blink.compat.source",
+          opts = { source_name = "vim_dadbod_completion" },
+        },
+      },
     },
 
     -- experimental signature help support

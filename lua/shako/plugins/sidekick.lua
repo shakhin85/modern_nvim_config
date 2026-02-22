@@ -72,10 +72,13 @@ return {
 						height = 20,
 					},
 					keys = {
-						hide_n   = { "q", "hide", mode = "n" },
-						hide_t   = { "<c-q>", "hide" },
-						win_p    = { "<c-w>p", "blur" },
-						prompt   = { "<c-p>", "prompt" },
+						hide_n        = { "q", "hide", mode = "n" },
+						-- <c-q> in terminal mode = enter normal mode (stopinsert, default).
+						-- <c-q> in normal mode  = hide window (hide_ctrl_q, default).
+						-- <Esc><Esc> = enter normal mode (single <Esc> still goes to the AI tool).
+						stopinsert_esc = { "<Esc><Esc>", "stopinsert", mode = "t" },
+						win_p         = { "<c-w>p", "blur" },
+						prompt        = { "<c-p>", "prompt" },
 					},
 				},
 				-- Zellij mux: only enable if inside a zellij session

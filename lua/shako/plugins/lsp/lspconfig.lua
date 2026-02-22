@@ -5,6 +5,7 @@ return {
     "saghen/blink.cmp",
     { "antosha417/nvim-lsp-file-operations", config = true },
     { "folke/neodev.nvim", opts = {} },
+    "b0o/schemastore.nvim",
   },
   config = function()
     -- import mason_lspconfig plugin
@@ -88,6 +89,15 @@ return {
       "basedpyright",
       "powershell_es",
       "graphql",
+      "sqls",
+      "marksman",
+      "jsonls",
+      "eslint",
+      "yamlls",
+      "dockerls",
+      "docker_compose_language_service",
+      "helm_ls",
+      "gopls",
     }
 
     for _, server in ipairs(servers) do
@@ -98,6 +108,45 @@ return {
       -- Specific configurations
       if server == "graphql" then
         opts.filetypes = { "graphql", "gql", "svelte", "typescriptreact", "javascriptreact" }
+      end
+
+      if server == "sqls" then
+        opts.filetypes = { "sql", "mysql", "plsql", "sqlite" }
+      end
+
+      if server == "eslint" then
+        opts.filetypes = {
+          "javascript",
+          "javascriptreact",
+          "javascript.jsx",
+          "typescript",
+          "typescriptreact",
+          "typescript.tsx",
+          "svelte",
+        }
+        opts.settings = {
+          workingDirectory = { mode = "auto" },
+        }
+      end
+
+      if server == "yamlls" then
+        opts.settings = {
+          yaml = {
+            schemaStore = { enable = false, url = "" },
+            schemas = require("schemastore").yaml.schemas(),
+            validate = true,
+            completion = true,
+          },
+        }
+      end
+
+      if server == "jsonls" then
+        opts.settings = {
+          json = {
+            schemas = require("schemastore").json.schemas(),
+            validate = { enable = true },
+          },
+        }
       end
 
       if server == "emmet_ls" then
