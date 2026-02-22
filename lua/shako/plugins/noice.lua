@@ -10,6 +10,9 @@ return {
     { "<leader>nn", "<cmd>Telescope notify<CR>",                                 desc = "Notify history (Telescope)" },
   },
   opts = {
+    notify = {
+      enabled = false,
+    },
     lsp = {
       override = {
         ["vim.lsp.util.convert_input_to_markdown_lines"] = true,
