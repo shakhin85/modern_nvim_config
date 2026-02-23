@@ -7,7 +7,7 @@ return {
 
     bufferline.setup({
       options = {
-        mode = "buffers",
+        mode = "tabs",
         separator_style = "slant",
         show_buffer_close_icons = true,
         show_close_icon = true,
