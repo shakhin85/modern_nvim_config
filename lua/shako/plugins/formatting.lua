@@ -20,6 +20,7 @@ return {
         lua = { "stylua" },
         python = { "ruff_format" },
         go = { "gofumpt" },
+        toml = { "taplo" },
       },
       format_on_save = {
         lsp_fallback = true,

@@ -98,6 +98,7 @@ return {
       "docker_compose_language_service",
       "helm_ls",
       "gopls",
+      "taplo",
     }
 
     for _, server in ipairs(servers) do

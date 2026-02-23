@@ -45,6 +45,7 @@ return {
         "helm_ls",
         "rust_analyzer",
         "gopls",
+        "taplo",
       },
     })
 
@@ -58,6 +59,8 @@ return {
         "ruff",
         -- formatters
         "gofumpt",
+        -- formatters
+        "taplo",
         -- linters
         "eslint_d",
         "pylint",
