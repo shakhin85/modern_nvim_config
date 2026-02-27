@@ -29,11 +29,7 @@ return {
 					name = "Launch file",
 					program = "${file}",
 					pythonPath = function()
-						local venv = os.getenv("VIRTUAL_ENV") or os.getenv("CONDA_PREFIX")
-						if venv then
-							return venv .. "/bin/python"
-						end
-						return vim.fn.exepath("python3") or vim.fn.exepath("python") or "python"
+						return vim.g.python3_host_prog
 					end,
 				},
 			}
