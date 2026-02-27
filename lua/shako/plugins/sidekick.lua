@@ -4,7 +4,7 @@
 --   1. Open AI tool: <leader>ac (Claude), <leader>am (Gemini), <leader>ag (Grok), <leader>ao (Copilot)
 --   2. Chat preserves history — hide/show window keeps same session
 --   3. Start fresh: <leader>ad (close session), then reopen
---   4. Prompts: <leader>ap opens picker with custom prompts (see cli.prompts below)
+--   4. Prompts: <leader>ap opens Telescope picker with custom prompts
 --
 -- TEMPLATE VARIABLES (usable in prompts):
 --   {this}           — code at cursor (function, class, or nearby code)
@@ -18,6 +18,90 @@
 --   {buffers}        — content from open buffers
 --   {quickfix}       — quickfix list entries
 --
+
+-- Single source of truth for all prompts
+local prompts = {
+	changes     = "Can you review my changes?",
+	review      = "Can you review {file} for any issues or improvements?",
+	explain     = "Explain the following code in detail:\n{this}",
+	diagnostics = "Can you help me fix the diagnostics in {file}?\n{diagnostics}",
+	fix         = "Fix this issue:\n{diagnostics}\n\nCode context:\n{this}",
+	debug       = "Help debug this code:\n{this}",
+	optimize    = "Suggest optimizations for:\n{this}",
+	simplify    = "Simplify this code:\n{this}",
+	refactor    = "Refactor the following code:\n{this}",
+	errors      = "Add comprehensive error handling with proper logging to:\n{this}",
+	types       = "Add proper type annotations/hints to:\n{this}",
+	document    = "Generate comprehensive documentation for:\n{this}",
+	tests       = "Generate comprehensive unit tests for:\n{this}",
+	edge_cases  = "What edge cases and failure modes should be tested for:\n{this}",
+	mocks       = "Generate mocks and fixtures for testing:\n{this}",
+	commit      = "Write a concise conventional commit message for these changes:\n{this}",
+	pr          = "Write a pull request description with summary and test plan for:\n{this}",
+	security    = "Review this code for security vulnerabilities (OWASP, injections, secrets):\n{this}",
+	dockerfile  = "Review this Dockerfile for best practices, security, and layer optimization:\n{file}",
+	ci          = "Review this CI/CD config and suggest improvements:\n{file}",
+	logging     = "Add structured logging with appropriate log levels to:\n{this}",
+}
+
+-- from_visual=true: restore gv so sidekick captures {selection}/{this}/{diagnostics} itself
+local function prompt_telescope(from_visual)
+	local pickers    = require("telescope.pickers")
+	local finders    = require("telescope.finders")
+	local conf       = require("telescope.config").values
+	local actions    = require("telescope.actions")
+	local state      = require("telescope.actions.state")
+	local previewers = require("telescope.previewers")
+
+	local results = {}
+	for key, text in pairs(prompts) do
+		table.insert(results, { key = key, text = text })
+	end
+	table.sort(results, function(a, b) return a.key < b.key end)
+
+	pickers.new({
+		layout_strategy = "horizontal",
+		layout_config   = { width = 0.85, height = 0.6, preview_width = 0.6 },
+	}, {
+		prompt_title = "Sidekick Prompts",
+		finder = finders.new_table({
+			results = results,
+			entry_maker = function(entry)
+				return {
+					value   = entry,
+					display = entry.key,
+					ordinal = entry.key,
+				}
+			end,
+		}),
+		sorter = conf.generic_sorter({}),
+		previewer = previewers.new_buffer_previewer({
+			title = "Prompt",
+			define_preview = function(self, entry)
+				vim.api.nvim_buf_set_lines(
+					self.state.bufnr, 0, -1, false,
+					vim.split(entry.value.text, "\n")
+				)
+			end,
+		}),
+		attach_mappings = function(prompt_bufnr)
+			actions.select_default:replace(function()
+				actions.close(prompt_bufnr)
+				local sel = state.get_selected_entry()
+				-- Defer until Telescope has fully closed and original window has focus,
+				-- otherwise gv runs in the wrong buffer and {selection} is empty.
+				vim.schedule(function()
+					if from_visual then
+						vim.cmd("normal! gv")
+					end
+					require("sidekick.cli").send({ prompt = sel.value.key, focus = true })
+				end)
+			end)
+			return true
+		end,
+	}):find()
+end
+
 return {
 	"folke/sidekick.nvim",
 	event = "VeryLazy",
@@ -89,48 +173,7 @@ return {
 						and vim.fn.getenv("ZELLIJ") ~= vim.NIL,
 					create = "terminal",
 				},
-				-- Custom prompt library — selected via <leader>ap
-				-- Variables like {this}, {file}, {selection} are expanded before sending
-				prompts = {
-					-- Review & understand
-					changes      = "Can you review my changes?",
-					review       = "Can you review {file} for any issues or improvements?",
-					explain      = "Explain the following code in detail:\n{this}",
-
-					-- Fix & diagnose
-					diagnostics  = "Can you help me fix the diagnostics in {file}?\n{diagnostics}",
-					fix          = "Fix this issue:\n{diagnostics}\n\nCode context:\n{this}",
-					debug        = "Help debug this code:\n{this}",
-
-					-- Improve
-					optimize     = "Suggest optimizations for:\n{this}",
-					simplify     = "Simplify this code:\n{this}",
-					refactor     = "Refactor the following code:\n{this}",
-					errors       = "Add comprehensive error handling with proper logging to:\n{this}",
-
-					-- Type safety
-					types        = "Add proper type annotations/hints to:\n{this}",
-
-					-- Docs
-					document     = "Generate comprehensive documentation for:\n{this}",
-
-					-- Testing
-					tests        = "Generate comprehensive unit tests for:\n{this}",
-					edge_cases   = "What edge cases and failure modes should be tested for:\n{this}",
-					mocks        = "Generate mocks and fixtures for testing:\n{this}",
-
-					-- Git workflow
-					commit       = "Write a concise conventional commit message for these changes:\n{this}",
-					pr           = "Write a pull request description with summary and test plan for:\n{this}",
-
-					-- Security
-					security     = "Review this code for security vulnerabilities (OWASP, injections, secrets):\n{this}",
-
-					-- DevOps
-					dockerfile   = "Review this Dockerfile for best practices, security, and layer optimization:\n{file}",
-					ci           = "Review this CI/CD config and suggest improvements:\n{file}",
-					logging      = "Add structured logging with appropriate log levels to:\n{this}",
-				},
+				prompts = prompts,
 			},
 
 			copilot = {
@@ -219,9 +262,15 @@ return {
 		-- Prompts and session
 		{
 			"<leader>ap",
-			function() require("sidekick.cli").prompt() end,
+			function() prompt_telescope(false) end,
 			desc = "Sidekick: prompt picker",
-			mode = { "n", "v" },
+			mode = "n",
+		},
+		{
+			"<leader>ap",
+			function() prompt_telescope(true) end,
+			desc = "Sidekick: prompt picker (visual)",
+			mode = "v",
 		},
 		{
 			"<leader>as",
