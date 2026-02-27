@@ -19,29 +19,40 @@
 --   {quickfix}       — quickfix list entries
 --
 
+-- When called from visual mode ctx.range is set → use {selection} (inline text).
+-- When called from normal mode ctx.range is nil  → use {this} (positional file ref).
+local function adaptive(prefix)
+	return function(ctx)
+		if ctx.range then
+			return prefix .. "\n{selection}"
+		end
+		return prefix .. "\n{this}"
+	end
+end
+
 -- Single source of truth for all prompts
 local prompts = {
 	changes     = "Can you review my changes?",
 	review      = "Can you review {file} for any issues or improvements?",
-	explain     = "Explain the following code in detail:\n{this}",
+	explain     = adaptive("Explain the following code in detail:"),
 	diagnostics = "Can you help me fix the diagnostics in {file}?\n{diagnostics}",
 	fix         = "Fix this issue:\n{diagnostics}\n\nCode context:\n{this}",
-	debug       = "Help debug this code:\n{this}",
-	optimize    = "Suggest optimizations for:\n{this}",
-	simplify    = "Simplify this code:\n{this}",
-	refactor    = "Refactor the following code:\n{this}",
-	errors      = "Add comprehensive error handling with proper logging to:\n{this}",
-	types       = "Add proper type annotations/hints to:\n{this}",
-	document    = "Generate comprehensive documentation for:\n{this}",
-	tests       = "Generate comprehensive unit tests for:\n{this}",
-	edge_cases  = "What edge cases and failure modes should be tested for:\n{this}",
-	mocks       = "Generate mocks and fixtures for testing:\n{this}",
-	commit      = "Write a concise conventional commit message for these changes:\n{this}",
-	pr          = "Write a pull request description with summary and test plan for:\n{this}",
-	security    = "Review this code for security vulnerabilities (OWASP, injections, secrets):\n{this}",
+	debug       = adaptive("Help debug this code:"),
+	optimize    = adaptive("Suggest optimizations for:"),
+	simplify    = adaptive("Simplify this code:"),
+	refactor    = adaptive("Refactor the following code:"),
+	errors      = adaptive("Add comprehensive error handling with proper logging to:"),
+	types       = adaptive("Add proper type annotations/hints to:"),
+	document    = adaptive("Generate comprehensive documentation for:"),
+	tests       = adaptive("Generate comprehensive unit tests for:"),
+	edge_cases  = adaptive("What edge cases and failure modes should be tested for:"),
+	mocks       = adaptive("Generate mocks and fixtures for testing:"),
+	commit      = adaptive("Write a concise conventional commit message for these changes:"),
+	pr          = adaptive("Write a pull request description with summary and test plan for:"),
+	security    = adaptive("Review this code for security vulnerabilities (OWASP, injections, secrets):"),
 	dockerfile  = "Review this Dockerfile for best practices, security, and layer optimization:\n{file}",
 	ci          = "Review this CI/CD config and suggest improvements:\n{file}",
-	logging     = "Add structured logging with appropriate log levels to:\n{this}",
+	logging     = adaptive("Add structured logging with appropriate log levels to:"),
 }
 
 -- from_visual=true: restore gv so sidekick captures {selection}/{this}/{diagnostics} itself
@@ -78,9 +89,12 @@ local function prompt_telescope(from_visual)
 		previewer = previewers.new_buffer_previewer({
 			title = "Prompt",
 			define_preview = function(self, entry)
+				local text = type(entry.value.text) == "function"
+					and "(adaptive) visual → {selection} / normal → {this}"
+					or entry.value.text
 				vim.api.nvim_buf_set_lines(
 					self.state.bufnr, 0, -1, false,
-					vim.split(entry.value.text, "\n")
+					vim.split(text, "\n")
 				)
 			end,
 		}),
