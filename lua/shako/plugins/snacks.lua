@@ -11,6 +11,8 @@ return {
 		quickfile = { enabled = true },
 		-- Better vim.ui.input
 		input = { enabled = true },
+		-- Picker (includes vim.ui.select override)
+		picker = { enabled = true, ui_select = true },
 		-- LSP-aware file rename
 		rename = { enabled = true },
 		-- Smart buffer delete (no window close side-effects)
@@ -55,9 +57,9 @@ return {
 			enabled = true,
 			preset = {
 				keys = {
-					{ icon = " ", key = "f", desc = "Find File", action = ":Telescope find_files" },
-					{ icon = " ", key = "r", desc = "Recent Files", action = ":Telescope oldfiles" },
-					{ icon = " ", key = "g", desc = "Find Text", action = ":Telescope live_grep" },
+					{ icon = " ", key = "f", desc = "Find File", action = ":lua Snacks.picker.files()" },
+					{ icon = " ", key = "r", desc = "Recent Files", action = ":lua Snacks.picker.recent()" },
+					{ icon = " ", key = "g", desc = "Find Text", action = ":lua Snacks.picker.grep()" },
 					{ icon = " ", key = "s", desc = "Restore Session", action = ":lua require('persistence').load()" },
 					{ icon = "󰒲 ", key = "l", desc = "Lazy", action = ":Lazy" },
 					{ icon = " ", key = "q", desc = "Quit", action = ":qa" },
@@ -87,41 +89,37 @@ return {
 		})
 	end,
 	keys = {
-		{
-			"<leader>lg",
-			function()
-				Snacks.lazygit()
-			end,
-			desc = "Open LazyGit",
-		},
-		{
-			"<leader>gb",
-			function()
-				Snacks.gitbrowse()
-			end,
-			desc = "Git browse in browser",
-		},
-		{
-			"<leader>z",
-			function()
-				Snacks.zen()
-			end,
-			desc = "Toggle zen mode",
-		},
-		{
-			"<leader>bd",
-			function()
-				Snacks.bufdelete()
-			end,
-			desc = "Delete buffer",
-		},
-		{
-			"<leader>tt",
-			function()
-				Snacks.terminal()
-			end,
-			desc = "Toggle terminal",
-			mode = { "n", "t" },
-		},
+		-- Picker: files & text
+		{ "<leader>ff", function() Snacks.picker.files() end, desc = "Find files" },
+		{ "<leader>fr", function() Snacks.picker.recent() end, desc = "Recent files" },
+		{ "<leader>fg", function() Snacks.picker.grep() end, desc = "Grep in cwd" },
+		{ "<leader>fc", function() Snacks.picker.grep_word() end, desc = "Grep word under cursor", mode = { "n", "x" } },
+		{ "<leader>fb", function() Snacks.picker.buffers() end, desc = "Buffers" },
+		{ "<leader>f/", function() Snacks.picker.lines() end, desc = "Search in buffer" },
+
+		-- Picker: LSP symbols
+		{ "<leader>fs", function() Snacks.picker.lsp_symbols() end, desc = "Document symbols" },
+		{ "<leader>fS", function() Snacks.picker.lsp_workspace_symbols() end, desc = "Workspace symbols" },
+		{ "<leader>fd", function() Snacks.picker.diagnostics() end, desc = "Diagnostics" },
+		{ "<leader>fD", function() Snacks.picker.diagnostics_buffer() end, desc = "Buffer diagnostics" },
+
+		-- Picker: git
+		{ "<leader>gc", function() Snacks.picker.git_log() end, desc = "Git log" },
+		{ "<leader>gs", function() Snacks.picker.git_status() end, desc = "Git status" },
+
+		-- Picker: other
+		{ "<leader>ft", function() Snacks.picker.todo_comments() end, desc = "Todo comments" },
+		{ "<leader>fh", function() Snacks.picker.help() end, desc = "Help tags" },
+		{ "<leader>fk", function() Snacks.picker.keymaps() end, desc = "Keymaps" },
+		{ "<leader>fp", function() Snacks.picker.pickers() end, desc = "All pickers" },
+
+		-- LazyGit
+		{ "<leader>lg", function() Snacks.lazygit() end, desc = "Open LazyGit" },
+		{ "<leader>gb", function() Snacks.gitbrowse() end, desc = "Git browse in browser" },
+
+		-- Other snacks features
+		{ "<leader>z", function() Snacks.zen() end, desc = "Toggle zen mode" },
+		{ "<leader>bd", function() Snacks.bufdelete() end, desc = "Delete buffer" },
+		{ "<leader>tt", function() Snacks.terminal() end, desc = "Toggle terminal", mode = { "n", "t" } },
 	},
 }

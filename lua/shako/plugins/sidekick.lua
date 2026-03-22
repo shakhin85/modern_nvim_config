@@ -22,27 +22,27 @@
 
 -- Custom prompts (merged with sidekick defaults)
 local prompts = {
-	changes     = "Can you review my changes?",
-	review      = "Can you review {file} for any issues or improvements?",
-	explain     = "Explain {this}",
+	changes = "Can you review my changes?",
+	review = "Can you review {file} for any issues or improvements?",
+	explain = "Explain {this}",
 	diagnostics = "Can you help me fix the diagnostics in {file}?\n{diagnostics}",
-	fix         = "Can you fix {this}?\n{diagnostics}",
-	debug       = "Help debug {this}",
-	optimize    = "How can {this} be optimized?",
-	simplify    = "Simplify {this}",
-	refactor    = "Refactor {this}",
-	errors      = "Add comprehensive error handling with proper logging to {this}",
-	types       = "Add proper type annotations/hints to {this}",
-	document    = "Add documentation to {function|line}",
-	tests       = "Can you write tests for {this}?",
-	edge_cases  = "What edge cases and failure modes should be tested for {this}?",
-	mocks       = "Generate mocks and fixtures for testing {this}",
-	commit      = "Write a concise conventional commit message for these changes",
-	pr          = "Write a pull request description with summary and test plan",
-	security    = "Review {this} for security vulnerabilities (OWASP, injections, secrets)",
-	dockerfile  = "Review this Dockerfile for best practices, security, and layer optimization:\n{file}",
-	ci          = "Review this CI/CD config and suggest improvements:\n{file}",
-	logging     = "Add structured logging with appropriate log levels to {this}",
+	fix = "Can you fix {this}?\n{diagnostics}",
+	debug = "Help debug {this}",
+	optimize = "How can {this} be optimized?",
+	simplify = "Simplify {this}",
+	refactor = "Refactor {this}",
+	errors = "Add comprehensive error handling with proper logging to {this}",
+	types = "Add proper type annotations/hints to {this}",
+	document = "Add documentation to {function|line}",
+	tests = "Can you write tests for {this}?",
+	edge_cases = "What edge cases and failure modes should be tested for {this}?",
+	mocks = "Generate mocks and fixtures for testing {this}",
+	commit = "Write a concise conventional commit message for these changes",
+	pr = "Write a pull request description with summary and test plan",
+	security = "Review {this} for security vulnerabilities (OWASP, injections, secrets)",
+	dockerfile = "Review this Dockerfile for best practices, security, and layer optimization:\n{file}",
+	ci = "Review this CI/CD config and suggest improvements:\n{file}",
+	logging = "Add structured logging with appropriate log levels to {this}",
 }
 
 return {
@@ -71,7 +71,7 @@ return {
 		require("sidekick").setup({
 			nes = {
 				enabled = true,
-				debounce = 100,
+				debounce = 50,
 				trigger = {
 					events = { "ModeChanged i:n", "TextChanged", "User SidekickNesDone" },
 				},
@@ -100,7 +100,7 @@ return {
 						height = 20,
 					},
 					keys = {
-						hide_n         = { "q", "hide", mode = "n" },
+						hide_n = { "q", "hide", mode = "n" },
 						stopinsert_esc = { "<Esc><Esc>", "stopinsert", mode = "t" },
 					},
 				},
@@ -109,7 +109,7 @@ return {
 					enabled = vim.env.ZELLIJ ~= nil,
 					create = "terminal",
 				},
-				picker = "telescope",
+				picker = "snacks",
 				prompts = prompts,
 			},
 
@@ -133,35 +133,47 @@ return {
 		},
 		{
 			"<A-]>",
-			function() require("sidekick").nes_jump_or_apply() end,
+			function()
+				require("sidekick").nes_jump_or_apply()
+			end,
 			desc = "NES: goto/apply next suggestion",
 		},
 		{
 			"<leader>an",
-			function() require("sidekick.nes").toggle() end,
+			function()
+				require("sidekick.nes").toggle()
+			end,
 			desc = "NES: toggle",
 		},
 		{
 			"<leader>au",
-			function() require("sidekick.nes").update() end,
+			function()
+				require("sidekick.nes").update()
+			end,
 			desc = "NES: fetch suggestions",
 		},
 		{
 			"<leader>ax",
-			function() require("sidekick.nes").clear() end,
+			function()
+				require("sidekick.nes").clear()
+			end,
 			desc = "NES: clear suggestions",
 		},
 
 		-- CLI focus/toggle
 		{
 			"<c-.>",
-			function() require("sidekick.cli").focus() end,
+			function()
+				require("sidekick.cli").focus()
+			end,
 			desc = "Sidekick: switch focus",
 			mode = { "n", "t", "i", "x" },
 		},
 		{
 			"<leader>aa",
-			function() require("sidekick.cli").toggle({ focus = true }) end,
+			function()
+				require("sidekick.cli").toggle({ focus = true })
+			end,
 			desc = "Sidekick: toggle CLI",
 			mode = { "n", "v" },
 		},
@@ -169,25 +181,33 @@ return {
 		-- AI providers
 		{
 			"<leader>ac",
-			function() require("sidekick.cli").toggle({ name = "claude", focus = true }) end,
+			function()
+				require("sidekick.cli").toggle({ name = "claude", focus = true })
+			end,
 			desc = "Sidekick: Claude",
 			mode = { "n", "v" },
 		},
 		{
 			"<leader>am",
-			function() require("sidekick.cli").toggle({ name = "gemini", focus = true }) end,
+			function()
+				require("sidekick.cli").toggle({ name = "gemini", focus = true })
+			end,
 			desc = "Sidekick: Gemini",
 			mode = { "n", "v" },
 		},
 		{
 			"<leader>ag",
-			function() require("sidekick.cli").toggle({ name = "grok", focus = true }) end,
+			function()
+				require("sidekick.cli").toggle({ name = "grok", focus = true })
+			end,
 			desc = "Sidekick: Grok",
 			mode = { "n", "v" },
 		},
 		{
 			"<leader>ao",
-			function() require("sidekick.cli").toggle({ name = "copilot", focus = true }) end,
+			function()
+				require("sidekick.cli").toggle({ name = "copilot", focus = true })
+			end,
 			desc = "Sidekick: Copilot",
 			mode = { "n", "v" },
 		},
@@ -195,24 +215,32 @@ return {
 		-- Prompts and context
 		{
 			"<leader>ap",
-			function() require("sidekick.cli").prompt() end,
+			function()
+				require("sidekick.cli").prompt()
+			end,
 			desc = "Sidekick: prompt picker",
 			mode = { "n", "x" },
 		},
 		{
 			"<leader>at",
-			function() require("sidekick.cli").send({ msg = "{this}" }) end,
+			function()
+				require("sidekick.cli").send({ msg = "{this}" })
+			end,
 			desc = "Sidekick: send this",
 			mode = { "n", "x" },
 		},
 		{
 			"<leader>af",
-			function() require("sidekick.cli").send({ msg = "{file}" }) end,
+			function()
+				require("sidekick.cli").send({ msg = "{file}" })
+			end,
 			desc = "Sidekick: send file",
 		},
 		{
 			"<leader>av",
-			function() require("sidekick.cli").send({ msg = "{selection}" }) end,
+			function()
+				require("sidekick.cli").send({ msg = "{selection}" })
+			end,
 			desc = "Sidekick: send selection",
 			mode = { "x" },
 		},
@@ -220,13 +248,17 @@ return {
 		-- Session
 		{
 			"<leader>as",
-			function() require("sidekick.cli").select() end,
+			function()
+				require("sidekick.cli").select()
+			end,
 			desc = "Sidekick: select AI tool",
 			mode = { "n", "v" },
 		},
 		{
 			"<leader>ad",
-			function() require("sidekick.cli").close() end,
+			function()
+				require("sidekick.cli").close()
+			end,
 			desc = "Sidekick: close session",
 			mode = { "n", "v" },
 		},
