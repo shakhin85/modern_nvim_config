@@ -1,0 +1,7 @@
+{
+  "planPath": "docs/superpowers/plans/2026-03-22-sidekick-config-redesign.md",
+  "tasks": [
+    {"id": 1, "subject": "Task 1: Rewrite sidekick.lua", "status": "pending"}
+  ],
+  "lastUpdated": "2026-03-22T00:00:00Z"
+}
