@@ -36,5 +36,15 @@ return {
 		keymap.set("n", "<leader>dw", "<cmd>DapViewWatch<CR>", { desc = "Watch expression under cursor" })
 		keymap.set("v", "<leader>dw", "<cmd>DapViewWatch<CR>", { desc = "Watch selected expression" })
 		keymap.set("n", "<leader>dj", "<cmd>DapViewJump repl<CR>", { desc = "Jump to REPL" })
+
+		-- Clear REPL buffer with Alt-C (works in normal and insert mode inside REPL)
+		vim.api.nvim_create_autocmd("FileType", {
+			pattern = "dap-repl",
+			callback = function(ev)
+				keymap.set({ "n", "i" }, "<A-c>", function()
+					vim.api.nvim_buf_set_lines(ev.buf, 0, -1, false, {})
+				end, { buffer = ev.buf, desc = "Clear REPL" })
+			end,
+		})
 	end,
 }
