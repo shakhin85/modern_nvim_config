@@ -51,6 +51,7 @@ return {
 	dependencies = {
 		{
 			"zbirenbaum/copilot.lua",
+			enabled = false, -- Copilot не доступен в регионе; NES всё равно не работает
 			event = "VeryLazy",
 			config = function()
 				require("copilot").setup({
@@ -70,7 +71,7 @@ return {
 	config = function()
 		require("sidekick").setup({
 			nes = {
-				enabled = true,
+				enabled = false, -- зависит от Copilot, недоступного в регионе
 				debounce = 50,
 				trigger = {
 					events = { "ModeChanged i:n", "TextChanged", "User SidekickNesDone" },
@@ -114,7 +115,7 @@ return {
 			},
 
 			copilot = {
-				status = { enabled = true },
+				status = { enabled = false },
 			},
 		})
 	end,
