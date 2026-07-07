@@ -32,7 +32,6 @@ return {
         "svelte",
         "lua_ls",
         "emmet_ls",
-        "prismals",
         "basedpyright",
         "powershell_es",
         "sqls",
