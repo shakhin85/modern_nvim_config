@@ -1,3 +1,4 @@
 .claude/settings.local.json
 .dual-graph/
 lua/shako/dbs.local.lua
+imageclips/
