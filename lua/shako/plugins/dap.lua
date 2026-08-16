@@ -27,6 +27,11 @@ return {
 			"jay-babu/mason-nvim-dap.nvim",
 			"theHamsta/nvim-dap-virtual-text",
 		},
+		keys = {
+			"<F5>", "<F10>", "<F11>", "<F12>",
+			"<leader>db", "<leader>dB", "<leader>dp", "<leader>dh", "<leader>de",
+			"<leader>dr", "<leader>dt", "<leader>dl", "<leader>dc", "<leader>dx",
+		},
 		config = function()
 			local dap = require("dap")
 			local widgets = require("dap.ui.widgets")

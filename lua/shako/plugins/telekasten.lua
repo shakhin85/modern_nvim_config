@@ -4,6 +4,30 @@ return {
 		"nvim-telescope/telescope.nvim",
 		"nvim-lua/plenary.nvim",
 	},
+	cmd = "Telekasten",
+	ft = { "telekasten", "markdown.telekasten" },
+	keys = {
+		{ "<leader>zf", "<cmd>Telekasten find_notes<cr>", desc = "Find notes" },
+		{ "<leader>zg", "<cmd>Telekasten search_notes<cr>", desc = "Search in notes" },
+		{ "<leader>zd", "<cmd>Telekasten goto_today<cr>", desc = "Go to today's note" },
+		{ "<leader>zz", "<cmd>Telekasten follow_link<cr>", desc = "Follow link" },
+		{ "<leader>zn", "<cmd>Telekasten new_note<cr>", desc = "New note" },
+		{ "<leader>zc", "<cmd>Telekasten show_calendar<cr>", desc = "Show calendar" },
+		{ "<leader>zb", "<cmd>Telekasten show_backlinks<cr>", desc = "Show backlinks" },
+		{ "<leader>zI", "<cmd>Telekasten insert_img_link<cr>", desc = "Insert image link" },
+		{ "<leader>zt", "<cmd>Telekasten show_tags<cr>", desc = "Show tags" },
+		{ "<leader>zT", "<cmd>Telekasten goto_thisweek<cr>", desc = "Go to this week" },
+		{ "<leader>zW", "<cmd>Telekasten find_weekly_notes<cr>", desc = "Find weekly notes" },
+		{ "<leader>zl", "<cmd>Telekasten insert_link<cr>", desc = "Insert link" },
+		{ "[[", "<cmd>Telekasten insert_link<cr>", desc = "Insert link", mode = "i" },
+		{ "<leader>zp", "<cmd>Telekasten panel<cr>", desc = "Command panel" },
+		{ "<leader>zr", "<cmd>Telekasten rename_note<cr>", desc = "Rename note" },
+		{ "<leader>zm", "<cmd>Telekasten preview_img<cr>", desc = "Preview image" },
+		{ "<leader>zi", "<cmd>Telekasten paste_img_and_link<cr>", desc = "Paste image and link" },
+		{ "<leader>z[", "<cmd>Telekasten toggle_todo<cr>", desc = "Toggle todo" },
+		{ "<leader>zs", function() vim.cmd("vsplit"); vim.cmd("Telekasten find_notes") end, desc = "Find notes in vertical split" },
+		{ "<leader>zh", function() vim.cmd("split"); vim.cmd("Telekasten find_notes") end, desc = "Find notes in horizontal split" },
+	},
 	config = function()
 		-- CRITICAL: Normalize path to forward slashes for Windows compatibility
 		-- This ensures path matching works correctly when Telescope returns forward-slash paths
@@ -65,54 +89,6 @@ return {
 				vim.fn.jobstart({ "cmd.exe", "/c", "start", '""', url }, { detach = true })
 			end or nil,
 		})
-
-		-- Keymaps
-		local keymap = vim.keymap
-
-		-- Основные команды
-		keymap.set("n", "<leader>zf", "<cmd>Telekasten find_notes<cr>", { desc = "Find notes" })
-		keymap.set("n", "<leader>zg", "<cmd>Telekasten search_notes<cr>", { desc = "Search in notes" })
-		keymap.set("n", "<leader>zd", "<cmd>Telekasten goto_today<cr>", { desc = "Go to today's note" })
-		keymap.set("n", "<leader>zz", "<cmd>Telekasten follow_link<cr>", { desc = "Follow link" })
-		keymap.set("n", "<leader>zn", "<cmd>Telekasten new_note<cr>", { desc = "New note" })
-		keymap.set("n", "<leader>zc", "<cmd>Telekasten show_calendar<cr>", { desc = "Show calendar" })
-		keymap.set("n", "<leader>zb", "<cmd>Telekasten show_backlinks<cr>", { desc = "Show backlinks" })
-		keymap.set("n", "<leader>zI", "<cmd>Telekasten insert_img_link<cr>", { desc = "Insert image link" })
-
-		-- Работа с тегами и ссылками
-		keymap.set("n", "<leader>zt", "<cmd>Telekasten show_tags<cr>", { desc = "Show tags" })
-		-- Removed duplicate <leader>z# (same as <leader>zt)
-		keymap.set("n", "<leader>zT", "<cmd>Telekasten goto_thisweek<cr>", { desc = "Go to this week" })
-		-- Removed duplicate <leader>zw (same as <leader>zT)
-		keymap.set("n", "<leader>zW", "<cmd>Telekasten find_weekly_notes<cr>", { desc = "Find weekly notes" })
-
-		-- Вставка ссылок
-		keymap.set("n", "<leader>zl", "<cmd>Telekasten insert_link<cr>", { desc = "Insert link" })
-		keymap.set("i", "[[", "<cmd>Telekasten insert_link<cr>", { desc = "Insert link" })
-
-		-- Панель управления
-		keymap.set("n", "<leader>zp", "<cmd>Telekasten panel<cr>", { desc = "Command panel" })
-
-		-- Переименование
-		keymap.set("n", "<leader>zr", "<cmd>Telekasten rename_note<cr>", { desc = "Rename note" })
-
-		-- Просмотр медиа
-		keymap.set("n", "<leader>zm", "<cmd>Telekasten preview_img<cr>", { desc = "Preview image" })
-		keymap.set("n", "<leader>zi", "<cmd>Telekasten paste_img_and_link<cr>", { desc = "Paste image and link" })
-
-		-- Навигация
-		keymap.set("n", "<leader>z[", "<cmd>Telekasten toggle_todo<cr>", { desc = "Toggle todo" })
-
-		-- Открытие заметок в splits
-		keymap.set("n", "<leader>zs", function()
-			vim.cmd("vsplit")
-			vim.cmd("Telekasten find_notes")
-		end, { desc = "Find notes in vertical split" })
-
-		keymap.set("n", "<leader>zh", function()
-			vim.cmd("split")
-			vim.cmd("Telekasten find_notes")
-		end, { desc = "Find notes in horizontal split" })
 
 		-- Setup keybindings for telekasten files (including after filetype change)
 		vim.api.nvim_create_autocmd("FileType", {

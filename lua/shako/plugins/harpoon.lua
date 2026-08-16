@@ -15,7 +15,7 @@ return {
 		local keymap = vim.keymap
 
 		-- Add current file to list
-		keymap.set("n", "<leader>a", function() harpoon:list():add() end, { desc = "Harpoon: add file" })
+		keymap.set("n", "<leader>Ha", function() harpoon:list():add() end, { desc = "Harpoon: add file" })
 
 		-- Toggle quick menu
 		keymap.set("n", "<C-e>", function() harpoon.ui:toggle_quick_menu(harpoon:list()) end, { desc = "Harpoon: menu" })

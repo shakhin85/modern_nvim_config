@@ -45,6 +45,7 @@ return {
         "rust_analyzer",
         "gopls",
         "taplo",
+        "graphql",
       },
     })
 

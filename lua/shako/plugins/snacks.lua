@@ -120,6 +120,5 @@ return {
 		-- Other snacks features
 		{ "<leader>z", function() Snacks.zen() end, desc = "Toggle zen mode" },
 		{ "<leader>bd", function() Snacks.bufdelete() end, desc = "Delete buffer" },
-		{ "<leader>tt", function() Snacks.terminal() end, desc = "Toggle terminal", mode = { "n", "t" } },
 	},
 }

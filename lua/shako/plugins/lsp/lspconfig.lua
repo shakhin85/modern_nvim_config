@@ -4,7 +4,11 @@ return {
   dependencies = {
     "saghen/blink.cmp",
     { "antosha417/nvim-lsp-file-operations", config = true },
-    { "folke/neodev.nvim", opts = {} },
+    {
+      "folke/lazydev.nvim",
+      ft = "lua",
+      opts = { library = { { path = "${3rd}/luv/library", words = { "vim%.uv" } } } },
+    },
     "b0o/schemastore.nvim",
   },
   config = function()

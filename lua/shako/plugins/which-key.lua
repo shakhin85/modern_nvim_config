@@ -24,6 +24,7 @@ return {
       -- Debug
       { "<leader>d",  group = "Debug",               icon = "" },
       { "<leader>D",  group = "Database",            icon = "" },
+      { "<leader>H",  group = "Harpoon",             icon = "󱡀" },
 
       -- Test
       { "<leader>T",  group = "Test",                icon = "󰙨" },

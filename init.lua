@@ -103,22 +103,7 @@ local function get_uv_python()
 		return nvim_venv_python
 	end
 
-	-- 3. Попробуем uv python find (для uv-managed Python)
-	local uv_available = vim.fn.executable("uv") == 1
-
-	if uv_available then
-		local redirect = vim.fn.has("win32") == 1 and "2>nul" or "2>/dev/null"
-		local handle = io.popen("uv python find " .. redirect)
-		if handle then
-			local result = handle:read("*a")
-			handle:close()
-			if result and result ~= "" and not result:match("error") then
-				local python = result:gsub("%s+", "") -- убираем переносы строк
-				python_path_cache = python
-				return python
-			end
-		end
-	end
+	-- 3. uv python find — асинхронно (см. refresh_uv_python), здесь не блокируем старт
 
 	-- 4. Fallback к системному Python (кросс-платформенно)
 	local python_candidates = {}
@@ -142,14 +127,32 @@ local function get_uv_python()
 	return fallback
 end
 
+-- uv-managed Python: уточняем асинхронно, не блокируя старт
+local function refresh_uv_python()
+	if vim.fn.executable("uv") ~= 1 or (python_path_cache and python_path_cache:find("/%.venv/")) then
+		return
+	end
+	vim.system({ "uv", "python", "find" }, { text = true }, function(o)
+		local py = vim.trim(o.stdout or "")
+		if o.code == 0 and py ~= "" then
+			vim.schedule(function()
+				python_path_cache = py
+				vim.g.python3_host_prog = py
+			end)
+		end
+	end)
+end
+
 -- Set Python provider immediately for neovim plugin support
 vim.g.python3_host_prog = get_uv_python()
+refresh_uv_python()
 
 -- Invalidate cache when changing directories
 vim.api.nvim_create_autocmd("DirChanged", {
 	callback = function()
 		python_path_cache = nil
 		vim.g.python3_host_prog = get_uv_python()
+		refresh_uv_python()
 	end,
 })
 

@@ -1,6 +1,8 @@
 return {
 	"nvim-tree/nvim-tree.lua",
 	dependencies = "nvim-tree/nvim-web-devicons",
+	cmd = { "NvimTreeToggle", "NvimTreeFindFileToggle" },
+	keys = { "<leader>ee", "<leader>ef", "<leader>ec", "<leader>er" },
 	config = function()
 		local nvimtree = require("nvim-tree")
 
