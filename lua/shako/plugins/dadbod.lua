@@ -30,6 +30,9 @@ return {
 			},
 		},
 		init = function()
+			-- ~/.psqlrc (\timing, unicode borders) исполняется ПОСЛЕ флагов psql -A и ломает
+			-- парсер dadbod-completion (схемы/колонки). Для psql, запущенных из nvim, rc не читаем.
+			vim.env.PSQLRC = "/dev/null"
 			vim.g.db_ui_use_nerd_fonts = 1
 			vim.g.db_ui_save_location = vim.fn.stdpath("data") .. "/db_ui"
 			vim.g.db_ui_execute_on_save = 0 -- :w не выполняет запрос; выполнять <leader>S / <leader>W
