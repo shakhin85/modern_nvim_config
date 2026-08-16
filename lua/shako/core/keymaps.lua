@@ -34,7 +34,13 @@ keymap.set("n", "<leader>tn", "<cmd>tabn<CR>", { desc = "Go to next tab" }) --  
 keymap.set("n", "<leader>tP", "<cmd>tabp<CR>", { desc = "Go to previous tab" }) --  go to previous tab (changed from tp to avoid conflict)
 keymap.set("n", "<leader>tF", "<cmd>tabnew %<CR>", { desc = "Open current buffer in new tab" }) --  move current buffer to new tab (changed from tf to avoid conflict)
 
--- Window navigation + resize (Ctrl+hjkl / Ctrl+стрелки): lua/shako/plugins/smart-splits.lua
+-- Window navigation (Ctrl+hjkl, включая переход в панели zellij): lua/shako/plugins/smart-splits.lua
+
+-- Window resizing: Ctrl+стрелки — только сплиты nvim (Alt+hjkl забирает zellij под focus)
+keymap.set("n", "<C-Left>", "<cmd>vertical resize -3<CR>", { desc = "Decrease window width" })
+keymap.set("n", "<C-Right>", "<cmd>vertical resize +3<CR>", { desc = "Increase window width" })
+keymap.set("n", "<C-Down>", "<cmd>resize -2<CR>", { desc = "Decrease window height" })
+keymap.set("n", "<C-Up>", "<cmd>resize +2<CR>", { desc = "Increase window height" })
 
 -- Flash-enhanced window and buffer navigation (defined in flash.lua)
 -- <leader>sw for window jump, <leader>sb for buffer jump

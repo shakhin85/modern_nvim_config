@@ -1,4 +1,4 @@
--- Единая навигация/resize по сплитам nvim и панелям zellij.
+-- Единая навигация по сплитам nvim и панелям zellij (resize панелей zellij — Alt +/-/= самого zellij).
 -- На краю окна nvim фокус уходит в соседнюю zellij-панель (`zellij action move-focus`).
 -- Обратно zellij шлёт Ctrl+hjkl в nvim, поэтому zellij их не биндит (см. ~/.config/zellij/config.kdl).
 return {
@@ -14,9 +14,5 @@ return {
 		{ "<C-j>", function() require("smart-splits").move_cursor_down() end, desc = "Move to window/pane below" },
 		{ "<C-k>", function() require("smart-splits").move_cursor_up() end, desc = "Move to window/pane above" },
 		{ "<C-l>", function() require("smart-splits").move_cursor_right() end, desc = "Move to right window/pane" },
-		{ "<C-Left>", function() require("smart-splits").resize_left() end, desc = "Resize window/pane left" },
-		{ "<C-Right>", function() require("smart-splits").resize_right() end, desc = "Resize window/pane right" },
-		{ "<C-Down>", function() require("smart-splits").resize_down() end, desc = "Resize window/pane down" },
-		{ "<C-Up>", function() require("smart-splits").resize_up() end, desc = "Resize window/pane up" },
 	},
 }
