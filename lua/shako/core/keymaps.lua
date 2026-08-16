@@ -40,11 +40,11 @@ keymap.set("n", "<C-j>", "<C-w>j", { desc = "Move to window below" })
 keymap.set("n", "<C-k>", "<C-w>k", { desc = "Move to window above" })
 keymap.set("n", "<C-l>", "<C-w>l", { desc = "Move to right window" })
 
--- Window resizing
-keymap.set("n", "<A-h>", "<C-w><", { desc = "Decrease window width" })
-keymap.set("n", "<A-l>", "<C-w>>", { desc = "Increase window width" })
-keymap.set("n", "<A-j>", "<C-w>-", { desc = "Decrease window height" })
-keymap.set("n", "<A-k>", "<C-w>+", { desc = "Increase window height" })
+-- Window resizing: Ctrl+стрелки (Alt+hjkl забирает zellij под focus, до nvim не доходит)
+keymap.set("n", "<C-Left>", "<cmd>vertical resize -3<CR>", { desc = "Decrease window width" })
+keymap.set("n", "<C-Right>", "<cmd>vertical resize +3<CR>", { desc = "Increase window width" })
+keymap.set("n", "<C-Down>", "<cmd>resize -2<CR>", { desc = "Decrease window height" })
+keymap.set("n", "<C-Up>", "<cmd>resize +2<CR>", { desc = "Increase window height" })
 
 -- Flash-enhanced window and buffer navigation (defined in flash.lua)
 -- <leader>sw for window jump, <leader>sb for buffer jump
