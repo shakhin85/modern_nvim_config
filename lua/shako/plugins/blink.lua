@@ -3,7 +3,7 @@ return {
   -- optional: provides snippets for the snippet source
   dependencies = {
     "rafamadriz/friendly-snippets",
-    "saghen/blink.compat",
+    "kristijanhusak/vim-dadbod-completion",
   },
 
   -- use a release tag to download pre-built binaries
@@ -45,11 +45,7 @@ return {
       },
       providers = {
         lazydev = { name = "LazyDev", module = "lazydev.integrations.blink", score_offset = 100 },
-        dadbod = {
-          name = "Dadbod",
-          module = "blink.compat.source",
-          opts = { source_name = "vim_dadbod_completion" },
-        },
+        dadbod = { name = "Dadbod", module = "vim_dadbod_completion.blink", score_offset = 50 },
       },
     },
 

@@ -1,5 +1,7 @@
 -- Скопировать в lua/shako/dbs.local.lua (git-ignored) и заполнить.
 -- Форматы URL: https://github.com/tpope/vim-dadbod#usage
+vim.g.db_default = "pg_local" -- ключ ниже: авто-привязка обычных .sql-буферов
+
 return {
 	pg_local = "postgres://user:pass@localhost:5432/dbname",
 	mssql_prod = "sqlserver://user:pass@host:1433/dbname", -- нужен sqlcmd в PATH

@@ -109,7 +109,6 @@ return {
       "basedpyright",
       "powershell_es",
       "graphql",
-      "sqls",
       "marksman",
       "jsonls",
       "eslint",
@@ -129,10 +128,6 @@ return {
       -- Specific configurations
       if server == "graphql" then
         opts.filetypes = { "graphql", "gql", "svelte", "typescriptreact", "javascriptreact" }
-      end
-
-      if server == "sqls" then
-        opts.filetypes = { "sql", "mysql", "plsql", "sqlite" }
       end
 
       if server == "eslint" then

@@ -34,7 +34,6 @@ return {
         "emmet_ls",
         "basedpyright",
         "powershell_es",
-        "sqls",
         "marksman",
         "jsonls",
         "eslint",
@@ -62,6 +61,7 @@ return {
         -- formatters
         "taplo",
         "sql-formatter",
+        "sqlfluff",
         -- linters
         "eslint_d",
         "pylint",

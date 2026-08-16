@@ -12,6 +12,18 @@ return {
       svelte = { "eslint_d" },
       python = { "pylint" },
       dockerfile = { "hadolint" },
+      sql = { "sqlfluff" },
+    }
+
+    -- sqlfluff: диалект по подключению буфера (b:db) — tsql для MSSQL, иначе postgres
+    lint.linters.sqlfluff.args = {
+      "lint",
+      "--format=json",
+      "--dialect",
+      function()
+        return (vim.b.db or ""):match("^sqlserver") and "tsql" or "postgres"
+      end,
+      "-",
     }
 
     local lint_augroup = vim.api.nvim_create_augroup("lint", { clear = true })
