@@ -56,6 +56,14 @@ else
 	opt.shellcmdflag = "-c"
 end
 
+-- quality of life
+opt.undofile = true
+opt.scrolloff = 8
+opt.updatetime = 250
+opt.timeoutlen = 300
+opt.autoread = true
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter" }, { command = "checktime" })
+
 -- highlight on yank
 vim.api.nvim_create_autocmd("TextYankPost", {
 	desc = "Highlight when yanking text",

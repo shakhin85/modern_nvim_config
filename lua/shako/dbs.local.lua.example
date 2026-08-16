@@ -1,0 +1,7 @@
+-- Скопировать в lua/shako/dbs.local.lua (git-ignored) и заполнить.
+-- Форматы URL: https://github.com/tpope/vim-dadbod#usage
+return {
+	pg_local = "postgres://user:pass@localhost:5432/dbname",
+	mssql_prod = "sqlserver://user:pass@host:1433/dbname", -- нужен sqlcmd в PATH
+	-- mssql с trust cert: "sqlserver://user:pass@host:1433/db?TrustServerCertificate=yes"
+}

@@ -11,11 +11,9 @@ require("shako.lazy")
 
 local function get_lemonade_cmd()
 	-- Проверяем WSL
-	local handle = io.popen("grep -qi microsoft /proc/version && echo 'wsl' || echo 'linux'")
-	local result = handle:read("*a")
-	handle:close()
+	local is_wsl = (vim.uv.os_uname().release or ""):lower():find("microsoft") ~= nil
 
-	if result:match("wsl") then
+	if is_wsl then
 		-- WSL - получаем IP Windows хоста
 		local ip_handle = io.popen("ip route show | grep -i default | awk '{ print $3}'")
 		local windows_ip = ip_handle:read("*a"):gsub("%s+", "")
@@ -51,8 +49,8 @@ if vim.fn.has("win32") == 1 then
 		},
 		cache_enabled = 0,
 	}
-else
-	-- Linux: use lemonade
+elseif vim.fn.executable("lemonade") == 1 then
+	-- Linux: use lemonade (если нет — nvim сам подберёт xclip/wl-copy)
 	vim.g.clipboard = {
 		name = "lemonade",
 		copy = {

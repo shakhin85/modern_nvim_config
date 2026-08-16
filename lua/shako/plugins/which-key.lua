@@ -23,6 +23,7 @@ return {
 
       -- Debug
       { "<leader>d",  group = "Debug",               icon = "" },
+      { "<leader>D",  group = "Database",            icon = "" },
 
       -- Test
       { "<leader>T",  group = "Test",                icon = "󰙨" },

@@ -21,20 +21,37 @@ return {
         local opts = { buffer = ev.buf, silent = true }
 
         -- set keybinds
-        opts.desc = "Show LSP references"
-        keymap.set("n", "gR", "<cmd>Telescope lsp_references<CR>", opts) -- show definition, references
+        -- Один путь на действие: снимаем дефолты 0.11 (grr/gri/grn/gra)
+        for _, lhs in ipairs({ "grr", "gri", "grn", "gra" }) do
+          pcall(vim.keymap.del, "n", lhs)
+        end
+        local tb = require("telescope.builtin")
+
+        opts.desc = "Go to definition (jump on single result)"
+        keymap.set("n", "gd", function() tb.lsp_definitions({ reuse_win = true }) end, opts)
 
         opts.desc = "Go to declaration"
-        keymap.set("n", "gD", vim.lsp.buf.declaration, opts) -- go to declaration
+        keymap.set("n", "gD", vim.lsp.buf.declaration, opts)
 
-        opts.desc = "Show LSP definitions"
-        keymap.set("n", "gd", "<cmd>Telescope lsp_definitions<CR>", opts) -- show lsp definitions
+        opts.desc = "Find usages / references (picker)"
+        keymap.set("n", "gr", function() tb.lsp_references({ include_declaration = false }) end, opts)
 
-        opts.desc = "Show LSP implementations"
-        keymap.set("n", "gi", "<cmd>Telescope lsp_implementations<CR>", opts) -- show lsp implementations
+        opts.desc = "Go to implementation"
+        keymap.set("n", "gI", tb.lsp_implementations, opts)
 
-        opts.desc = "Show LSP type definitions"
-        keymap.set("n", "gt", "<cmd>Telescope lsp_type_definitions<CR>", opts) -- show lsp type definitions
+        opts.desc = "Go to type definition"
+        keymap.set("n", "gy", tb.lsp_type_definitions, opts)
+
+        opts.desc = "Document symbols"
+        keymap.set("n", "gO", tb.lsp_document_symbols, opts)
+
+        opts.desc = "Workspace symbols"
+        keymap.set("n", "<leader>ws", tb.lsp_dynamic_workspace_symbols, opts)
+
+        opts.desc = "Toggle inlay hints"
+        keymap.set("n", "<leader>uh", function()
+          vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = ev.buf }), { bufnr = ev.buf })
+        end, opts)
 
         opts.desc = "See available code actions"
         keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, opts) -- see available code actions, in visual mode will apply to selection
@@ -43,16 +60,16 @@ return {
         keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts) -- smart rename
 
         opts.desc = "Show buffer diagnostics"
-        keymap.set("n", "<leader>D", "<cmd>Telescope diagnostics bufnr=0<CR>", opts) -- show  diagnostics for file
+        keymap.set("n", "<leader>xd", "<cmd>Telescope diagnostics bufnr=0<CR>", opts) -- <leader>D зарезервирован под Database
 
         opts.desc = "Show line diagnostics"
         keymap.set("n", "gl", vim.diagnostic.open_float, opts) -- show diagnostics for line
 
         opts.desc = "Go to previous diagnostic"
-        keymap.set("n", "[d", vim.diagnostic.goto_prev, opts) -- jump to previous diagnostic in buffer
+        keymap.set("n", "[d", function() vim.diagnostic.jump({ count = -1, float = true }) end, opts) -- jump to previous diagnostic in buffer
 
         opts.desc = "Go to next diagnostic"
-        keymap.set("n", "]d", vim.diagnostic.goto_next, opts) -- jump to next diagnostic in buffer
+        keymap.set("n", "]d", function() vim.diagnostic.jump({ count = 1, float = true }) end, opts) -- jump to next diagnostic in buffer
 
         opts.desc = "Show documentation for what is under cursor"
         keymap.set("n", "K", vim.lsp.buf.hover, opts) -- show documentation for what is under cursor
@@ -85,7 +102,6 @@ return {
       "svelte",
       "lua_ls",
       "emmet_ls",
-      "prismals",
       "basedpyright",
       "powershell_es",
       "graphql",

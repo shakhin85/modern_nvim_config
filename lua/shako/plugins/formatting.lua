@@ -21,6 +21,9 @@ return {
         python = { "ruff_format" },
         go = { "gofumpt" },
         toml = { "taplo" },
+        sql = { "sql_formatter" },
+        mysql = { "sql_formatter" },
+        plsql = { "sql_formatter" },
       },
       format_on_save = {
         lsp_format = "fallback",

@@ -60,6 +60,7 @@ return {
         "gofumpt",
         -- formatters
         "taplo",
+        "sql-formatter",
         -- linters
         "eslint_d",
         "pylint",
