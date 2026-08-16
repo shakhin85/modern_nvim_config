@@ -1,3 +1,54 @@
+-- Экспорт запроса из буфера в CSV: PG → psql \copy, MSSQL → sqlcmd -s,
+local function export_csv()
+	local url = vim.b.db
+	if not url then
+		return vim.notify("b:db не задан (<leader>Ds)", vim.log.levels.WARN)
+	end
+	local lines
+	if vim.fn.mode():match("[vV]") then
+		vim.cmd([[normal! <Esc>]])
+		lines = vim.api.nvim_buf_get_lines(0, vim.fn.line("'<") - 1, vim.fn.line("'>"), false)
+	else
+		lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+	end
+	local query = vim.trim(table.concat(lines, "\n")):gsub(";%s*$", "")
+	if query == "" then
+		return vim.notify("Пустой запрос", vim.log.levels.WARN)
+	end
+	local default = vim.fn.expand("~") .. "/query-" .. os.date("%Y%m%d-%H%M%S") .. ".csv"
+	vim.ui.input({ prompt = "CSV path: ", default = default, completion = "file" }, function(path)
+		if not path or path == "" then
+			return
+		end
+		local cmd
+		if url:match("^postgres") then
+			cmd = { "psql", "-w", "--dbname", url, "-c", ("\\copy (%s) to '%s' csv header"):format(query, path) }
+		elseif url:match("^sqlserver") then
+			local user, pass, host, port, db = url:match("^sqlserver://([^:/@]*):?([^/@]*)@?([^:/?]+):?(%d*)/([^?]+)")
+			if not host then
+				return vim.notify("Не разобрал sqlserver URL", vim.log.levels.ERROR)
+			end
+			cmd = { "sqlcmd", "-S", host .. (port ~= "" and ("," .. port) or ""), "-d", db, "-C", "-s", ",", "-W", "-Q", query, "-o", path }
+			if user ~= "" then
+				vim.list_extend(cmd, { "-U", user, "-P", pass })
+			else
+				table.insert(cmd, "-E")
+			end
+		else
+			return vim.notify("CSV-экспорт поддержан для postgres/sqlserver", vim.log.levels.WARN)
+		end
+		vim.system(cmd, { text = true }, function(o)
+			vim.schedule(function()
+				if o.code == 0 then
+					vim.notify("CSV → " .. path)
+				else
+					vim.notify("Экспорт упал:\n" .. (o.stderr ~= "" and o.stderr or o.stdout), vim.log.levels.ERROR)
+				end
+			end)
+		end)
+	end)
+end
+
 return {
 	{
 		"tpope/vim-dadbod",
@@ -14,6 +65,7 @@ return {
 			{ "<leader>Du", "<cmd>DBUIToggle<CR>", desc = "Toggle DB UI" },
 			{ "<leader>Da", "<cmd>DBUIAddConnection<CR>", desc = "Add DB connection" },
 			{ "<leader>Df", "<cmd>DBUIFindBuffer<CR>", desc = "Find DB buffer" },
+			{ "<leader>Dc", export_csv, mode = { "n", "x" }, desc = "Export query result to CSV" },
 			{
 				"<leader>Ds",
 				function()
