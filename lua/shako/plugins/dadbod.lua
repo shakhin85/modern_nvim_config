@@ -1,9 +1,5 @@
--- Экспорт запроса из буфера в CSV: PG → psql \copy, MSSQL → sqlcmd -s,
-local function export_csv()
-	local url = vim.b.db
-	if not url then
-		return vim.notify("b:db не задан (<leader>Ds)", vim.log.levels.WARN)
-	end
+-- Запрос из буфера: выделение в visual-режиме, иначе весь буфер.
+local function buffer_query()
 	local lines
 	if vim.fn.mode():match("[vV]") then
 		vim.cmd([[normal! <Esc>]])
@@ -12,40 +8,80 @@ local function export_csv()
 		lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 	end
 	local query = vim.trim(table.concat(lines, "\n")):gsub(";%s*$", "")
-	if query == "" then
+	return query ~= "" and query or nil
+end
+
+-- CSV-выгрузка: PG → psql \copy, MSSQL → sqlcmd -s,
+local function csv_cmd(url, query, path)
+	if url:match("^postgres") then
+		return { "psql", "-w", "--dbname", url, "-c", ("\\copy (%s) to '%s' csv header"):format(query, path) }
+	elseif url:match("^sqlserver") then
+		local user, pass, host, port, db = url:match("^sqlserver://([^:/@]*):?([^/@]*)@?([^:/?]+):?(%d*)/([^?]+)")
+		if not host then
+			return nil, "Не разобрал sqlserver URL"
+		end
+		local cmd = { "sqlcmd", "-S", host .. (port ~= "" and ("," .. port) or ""), "-d", db, "-C", "-s", ",", "-W", "-Q", query, "-o", path }
+		if user ~= "" then
+			vim.list_extend(cmd, { "-U", user, "-P", pass })
+		else
+			table.insert(cmd, "-E")
+		end
+		return cmd
+	end
+	return nil, "CSV-экспорт поддержан для postgres/sqlserver"
+end
+
+-- Выгрузить запрос в CSV по пути path, дальше отдать управление on_done(path).
+local function to_csv(path, on_done)
+	local url = vim.b.db
+	if not url then
+		return vim.notify("b:db не задан (<leader>Ds)", vim.log.levels.WARN)
+	end
+	local query = buffer_query()
+	if not query then
 		return vim.notify("Пустой запрос", vim.log.levels.WARN)
 	end
+	local cmd, err = csv_cmd(url, query, path)
+	if not cmd then
+		return vim.notify(err, vim.log.levels.WARN)
+	end
+	vim.system(cmd, { text = true }, function(o)
+		vim.schedule(function()
+			if o.code == 0 then
+				on_done(path)
+			else
+				vim.notify("Экспорт упал:\n" .. (o.stderr ~= "" and o.stderr or o.stdout), vim.log.levels.ERROR)
+			end
+		end)
+	end)
+end
+
+local function export_csv()
 	local default = vim.fn.expand("~") .. "/query-" .. os.date("%Y%m%d-%H%M%S") .. ".csv"
 	vim.ui.input({ prompt = "CSV path: ", default = default, completion = "file" }, function(path)
-		if not path or path == "" then
-			return
-		end
-		local cmd
-		if url:match("^postgres") then
-			cmd = { "psql", "-w", "--dbname", url, "-c", ("\\copy (%s) to '%s' csv header"):format(query, path) }
-		elseif url:match("^sqlserver") then
-			local user, pass, host, port, db = url:match("^sqlserver://([^:/@]*):?([^/@]*)@?([^:/?]+):?(%d*)/([^?]+)")
-			if not host then
-				return vim.notify("Не разобрал sqlserver URL", vim.log.levels.ERROR)
-			end
-			cmd = { "sqlcmd", "-S", host .. (port ~= "" and ("," .. port) or ""), "-d", db, "-C", "-s", ",", "-W", "-Q", query, "-o", path }
-			if user ~= "" then
-				vim.list_extend(cmd, { "-U", user, "-P", pass })
-			else
-				table.insert(cmd, "-E")
-			end
-		else
-			return vim.notify("CSV-экспорт поддержан для postgres/sqlserver", vim.log.levels.WARN)
-		end
-		vim.system(cmd, { text = true }, function(o)
-			vim.schedule(function()
-				if o.code == 0 then
-					vim.notify("CSV → " .. path)
-				else
-					vim.notify("Экспорт упал:\n" .. (o.stderr ~= "" and o.stderr or o.stdout), vim.log.levels.ERROR)
-				end
+		if path and path ~= "" then
+			to_csv(path, function(p)
+				vim.notify("CSV → " .. p)
 			end)
-		end)
+		end
+	end)
+end
+
+-- Результат в TUI-грид (сортировка/фильтр/сводка): visidata, иначе csvlens.
+local function inspect_result()
+	local viewer = vim.fn.executable("vd") == 1 and "vd" or (vim.fn.executable("csvlens") == 1 and "csvlens" or nil)
+	if not viewer then
+		return vim.notify("Нет ни vd (visidata), ни csvlens", vim.log.levels.WARN)
+	end
+	local path = vim.fn.tempname() .. ".csv"
+	to_csv(path, function(p)
+		vim.cmd("tabnew")
+		vim.fn.jobstart({ viewer, p }, { term = true, on_exit = function()
+			vim.schedule(function()
+				vim.fn.delete(p)
+			end)
+		end })
+		vim.cmd("startinsert")
 	end)
 end
 
@@ -66,6 +102,7 @@ return {
 			{ "<leader>Da", "<cmd>DBUIAddConnection<CR>", desc = "Add DB connection" },
 			{ "<leader>Df", "<cmd>DBUIFindBuffer<CR>", desc = "Find DB buffer" },
 			{ "<leader>Dc", export_csv, mode = { "n", "x" }, desc = "Export query result to CSV" },
+			{ "<leader>Dv", inspect_result, mode = { "n", "x" }, desc = "Inspect result in visidata/csvlens" },
 			{
 				"<leader>Ds",
 				function()
@@ -125,5 +162,65 @@ return {
 		"kristijanhusak/vim-dadbod-completion",
 		dependencies = { "tpope/vim-dadbod" },
 		ft = { "sql", "mysql", "plsql", "sqlite" },
+	},
+	-- Yank результата в JSON/CSV/XML прямо из dbout-буфера
+	{
+		"davesavic/dadbod-ui-yank",
+		dependencies = { "kristijanhusak/vim-dadbod-ui" },
+		cmd = { "DBUIYankAsCSV", "DBUIYankAsJSON", "DBUIYankAsXML" },
+		keys = {
+			{ "<leader>Dyc", "<cmd>DBUIYankAsCSV<CR>", desc = "Yank result as CSV" },
+			{ "<leader>Dyj", "<cmd>DBUIYankAsJSON<CR>", desc = "Yank result as JSON" },
+			{ "<leader>Dyx", "<cmd>DBUIYankAsXML<CR>", desc = "Yank result as XML" },
+		},
+		opts = {},
+	},
+	-- XLSX-выгрузка (только PostgreSQL: гоняет COPY через psql)
+	{
+		"tuliopaim/dadbod-export-xlsx.nvim",
+		dependencies = { "tpope/vim-dadbod" },
+		cmd = { "ExportXlsx", "WrapToCsv", "ExportXlsxBuild" },
+		keys = { { "<leader>Dx", "<cmd>ExportXlsx<CR>", mode = { "n", "x" }, desc = "Export result to XLSX (PG)" } },
+		config = function()
+			require("dadbod_export_xlsx").setup({ keymap = false })
+		end,
+	},
+	-- Редактируемый грид «как в DataGrip»: staged-мутации, фильтры, FK-навигация,
+	-- ER-диаграмма, EXPLAIN человеческим языком, профилирование колонок.
+	-- Коннекты не дублируем: :GripConnect принимает URL, берём его из vim.g.dbs.
+	{
+		"joryeugene/dadbod-grip.nvim",
+		version = "*",
+		cmd = { "Grip", "GripStart", "GripConnect", "GripSchema", "GripTables", "GripQuery", "GripHistory", "GripExplain", "GripProfile", "GripToggle" },
+		keys = {
+			{
+				"<leader>Dg",
+				function()
+					local keys = vim.tbl_keys(vim.g.dbs or {})
+					table.sort(keys)
+					vim.ui.select(keys, { prompt = "Grip: подключиться к:" }, function(k)
+						if k then
+							vim.cmd("GripConnect " .. vim.fn.fnameescape(vim.g.dbs[k]))
+						end
+					end)
+				end,
+				desc = "Grip: connect (grid UI)",
+			},
+			{ "<leader>DG", "<cmd>GripToggle<CR>", desc = "Grip: toggle windows" },
+			{ "<leader>Dt", "<cmd>GripTables<CR>", desc = "Grip: table picker" },
+			{ "<leader>Dh", "<cmd>GripHistory<CR>", desc = "Grip: query history" },
+			{ "<leader>De", "<cmd>GripExplain<CR>", mode = { "n", "x" }, desc = "Grip: explain (Query Doctor)" },
+			{ "<leader>Dp", "<cmd>GripProfile<CR>", desc = "Grip: profile table columns" },
+		},
+		opts = {
+			picker = "snacks",
+			limit = 200,
+			timeout = 30000,
+			completion = false, -- дополняем через blink + vim-dadbod-completion
+			-- AI выключен намеренно: он прогревает схему на каждом коннекте
+			-- и тратит токены провайдера молча. Включать осознанно: ai = { provider = "anthropic" }.
+			ai = false,
+			discovery = false, -- нет локальных docker-стеков с postgres-лейблами
+		},
 	},
 }
