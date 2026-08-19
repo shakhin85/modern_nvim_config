@@ -169,6 +169,11 @@ return {
 					if not vim.b[ev.buf].db and vim.g.dbs and vim.g.db_default then
 						attach_db(ev.buf, vim.g.dbs[vim.g.db_default])
 					end
+					-- <leader>S из dadbod-ui живёт только внутри его буферов; в обычном
+					-- .sql-файле выполнять запрос нечем, заводим сами: весь буфер в
+					-- normal, выделение — в visual (та же логика, что у <leader>Dc/Dv).
+					vim.keymap.set("n", "<leader>S", "<Cmd>%DB<CR>", { buffer = ev.buf, desc = "Execute buffer against b:db" })
+					vim.keymap.set("x", "<leader>S", "db#op_exec()", { buffer = ev.buf, expr = true, desc = "Execute selection against b:db" })
 				end,
 			})
 		end,
