@@ -21,7 +21,12 @@ return {
     -- 'enter' for mappings similar to 'super-tab' but with 'enter' to accept
     -- see the "default configuration" section below for full documentation on how to define
     -- your own keymap.
-    keymap = { preset = "default" },
+    -- default-пресет принимает только по <C-y> — Tab и Enter в нём не работают.
+    -- super-tab: Tab принимает выбранное, Enter добавлен отдельно.
+    keymap = {
+      preset = "super-tab",
+      ["<CR>"] = { "accept", "fallback" },
+    },
 
     appearance = {
       -- Sets the fallback highlight groups to nvim-cmp's highlight groups

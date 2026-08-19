@@ -1,3 +1,17 @@
+-- Привязать буфер к базе. Одного b:db мало: vim-dadbod-completion наполняет кэш
+-- схемы только по своему FileType-автокоманде, то есть до того, как b:db выставлен.
+-- Без явного fetch() completion молчит — ни таблиц, ни колонок по алиасу.
+local function attach_db(bufnr, url)
+	vim.b[bufnr].db = url
+	-- Через schedule: на FileType-событии lazy может ещё не успеть подгрузить
+	-- vim-dadbod-completion (он ft-ленивый), и функции просто нет в этот тик.
+	vim.schedule(function()
+		if vim.api.nvim_buf_is_valid(bufnr) and vim.fn.exists("*vim_dadbod_completion#fetch") == 1 then
+			vim.fn["vim_dadbod_completion#fetch"](bufnr)
+		end
+	end)
+end
+
 -- Запрос из буфера: выделение в visual-режиме, иначе весь буфер.
 local function buffer_query()
 	local lines
@@ -108,10 +122,11 @@ return {
 				function()
 					local keys = vim.tbl_keys(vim.g.dbs or {})
 					table.sort(keys)
+					local bufnr = vim.api.nvim_get_current_buf()
 					vim.ui.select(keys, { prompt = "DB for this buffer:" }, function(k)
 						if k then
-							vim.b.db = vim.g.dbs[k]
-							vim.notify("b:db = " .. k)
+							attach_db(bufnr, vim.g.dbs[k])
+							vim.notify("b:db = " .. k .. " (схема подгружается)")
 						end
 					end)
 				end,
@@ -152,7 +167,7 @@ return {
 				pattern = { "sql", "mysql", "plsql" },
 				callback = function(ev)
 					if not vim.b[ev.buf].db and vim.g.dbs and vim.g.db_default then
-						vim.b[ev.buf].db = vim.g.dbs[vim.g.db_default]
+						attach_db(ev.buf, vim.g.dbs[vim.g.db_default])
 					end
 				end,
 			})
