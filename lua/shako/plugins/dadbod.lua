@@ -200,7 +200,9 @@ return {
 					table.sort(keys)
 					vim.ui.select(keys, { prompt = "Grip: подключиться к:" }, function(k)
 						if k then
-							vim.cmd("GripConnect " .. vim.fn.fnameescape(vim.g.dbs[k]))
+							-- Через Lua API, а не :GripConnect <url>: URL с паролем не должен
+							-- попадать в историю команд, а оттуда в shada на диске.
+							require("dadbod-grip.connections").switch(vim.g.dbs[k], k)
 						end
 					end)
 				end,
