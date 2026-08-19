@@ -172,8 +172,16 @@ return {
 					-- <leader>S из dadbod-ui живёт только внутри его буферов; в обычном
 					-- .sql-файле выполнять запрос нечем, заводим сами: весь буфер в
 					-- normal, выделение — в visual (та же логика, что у <leader>Dc/Dv).
-					vim.keymap.set("n", "<leader>S", "<Cmd>%DB<CR>", { buffer = ev.buf, desc = "Execute buffer against b:db" })
-					vim.keymap.set("x", "<leader>S", "db#op_exec()", { buffer = ev.buf, expr = true, desc = "Execute selection against b:db" })
+					-- Через schedule и с проверкой b:dbui_db_key_name: у буферов самого
+					-- DBUI тоже filetype=sql, и перебивать их выполнение нельзя — оно
+					-- умеет bind-параметры и роутинг результата в окно DBUI.
+					vim.schedule(function()
+						if not vim.api.nvim_buf_is_valid(ev.buf) or vim.b[ev.buf].dbui_db_key_name then
+							return
+						end
+						vim.keymap.set("n", "<leader>S", "<Cmd>%DB<CR>", { buffer = ev.buf, desc = "Execute buffer against b:db" })
+						vim.keymap.set("x", "<leader>S", "db#op_exec()", { buffer = ev.buf, expr = true, desc = "Execute selection against b:db" })
+					end)
 				end,
 			})
 		end,
