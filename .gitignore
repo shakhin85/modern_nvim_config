@@ -3,3 +3,4 @@
 lua/shako/dbs.local.lua
 imageclips/
 tmp/
+.grip/
