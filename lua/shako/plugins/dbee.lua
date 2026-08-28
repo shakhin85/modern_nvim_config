@@ -22,6 +22,8 @@ end
 
 return {
 	"kndndrj/nvim-dbee",
+	-- Плагин вешает автокоманду на BufModifiedSet, которого в Neovim 0.13-dev нет;
+	-- имя события подменяет шим в init.lua. Апстрим стоит с 2025-07-25 (dda5176).
 	dependencies = { "MunifTanjim/nui.nvim" },
 	build = function()
 		require("dbee").install()

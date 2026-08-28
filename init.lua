@@ -7,6 +7,33 @@ vim.opt.termguicolors = true
 vim.opt.tgc = true
 
 require("shako.core")
+-- Шим для nvim-lsp-file-operations: плагин зовёт vim.lsp.get_active_clients(),
+-- которую Neovim удалил (deprecated с 0.10). Апстрим заброшен — последний коммит
+-- b9c795d от 2026-01-04, фикса нет. Убрать, когда плагин обновят или выкинут.
+if vim.lsp.get_active_clients == nil then
+	vim.lsp.get_active_clients = vim.lsp.get_clients
+end
+
+-- Шим для nvim-dbee: он вешает автокоманду на BufModifiedSet (метка «изменён» у
+-- ноты в дереве), а в этой сборке Neovim события нет. Апстрим стоит с 2025-07-25.
+-- Подменяем только это имя, остальные события идут как есть.
+if vim.fn.exists("##BufModifiedSet") == 0 then
+	local orig = vim.api.nvim_create_autocmd
+	vim.api.nvim_create_autocmd = function(event, opts)
+		local list = type(event) == "table" and event or { event }
+		local out, hit = {}, false
+		for _, e in ipairs(list) do
+			if e == "BufModifiedSet" then
+				hit = true
+				vim.list_extend(out, { "TextChanged", "TextChangedI", "BufWritePost" })
+			else
+				table.insert(out, e)
+			end
+		end
+		return orig(hit and out or event, opts)
+	end
+end
+
 require("shako.lazy")
 
 local function get_lemonade_cmd()
