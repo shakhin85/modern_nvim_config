@@ -182,11 +182,20 @@ return {
 				pattern = { "sql", "mysql", "plsql" },
 				callback = function(ev)
 					-- Заметкам nvim-dbee плагин тоже ставит filetype=sql
-					-- (dbee/ui/editor/init.lua), но b:dbui_db_key_name у них нет —
-					-- отсекаем по каталогу заметок, иначе им достаётся чужой b:db
-					-- (по нему живут completion/conform/sqlfluff) и второй <leader>S.
+					-- (dbee/ui/editor/init.lua), но b:dbui_db_key_name у них нет.
+					-- Своего completion у dbee нет — он идёт через
+					-- vim-dadbod-completion и требует b:db, поэтому базу ставим, но
+					-- ТЕКУЩУЮ из dbee, а не дефолтную, и <leader>S не трогаем:
+					-- выполнение запроса у dbee своё.
 					local notes = vim.fs.normalize(vim.fn.stdpath("state") .. "/dbee/notes")
 					if vim.startswith(vim.fs.normalize(vim.api.nvim_buf_get_name(ev.buf)), notes) then
+						local ok, api = pcall(require, "dbee.api")
+						if ok then
+							local ok_conn, conn = pcall(api.core.get_current_connection)
+							if ok_conn and conn and conn.url then
+								attach_db(ev.buf, conn.url)
+							end
+						end
 						return
 					end
 					if not vim.b[ev.buf].db and vim.g.dbs and vim.g.db_default then

@@ -2,6 +2,13 @@
 -- Форматы URL: https://github.com/tpope/vim-dadbod#usage
 vim.g.db_default = "pg_local" -- ключ ниже: авто-привязка обычных .sql-буферов
 
+-- PostgreSQL: если таблицы лежат не в public, добавь search_path в URL —
+-- vim-dadbod берёт список таблиц через psql \dtvm, а тот смотрит только
+-- search_path. Пустой список = молчит autocomplete по алиасу (SELECT t.… FROM tbl t).
+--   ?options=-csearch_path%3Ddm,dds,ods,public   (при своей query-строке — через &)
+-- Колонки идут из information_schema.columns, где НЕТ materialized views:
+-- по алиасу матвью autocomplete не отработает, это ограничение плагина.
+
 return {
 	pg_local = "postgres://user:pass@localhost:5432/dbname",
 	mssql_prod = "sqlserver://user:pass@host:1433/dbname", -- нужен sqlcmd в PATH
