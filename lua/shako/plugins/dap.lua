@@ -23,9 +23,16 @@ local exception_labels = { "uncaught", "uncaught + raised", "none" }
 return {
 	{
 		"mfussenegger/nvim-dap",
+		-- Спутники держим здесь со своими opts: отдельными спеками без триггеров
+		-- lazy грузит их на старте (reason start), а они через require("dap.utils")
+		-- тянут сам nvim-dap мимо keys ниже.
 		dependencies = {
-			"jay-babu/mason-nvim-dap.nvim",
-			"theHamsta/nvim-dap-virtual-text",
+			{
+				"jay-babu/mason-nvim-dap.nvim",
+				dependencies = "williamboman/mason.nvim",
+				opts = { ensure_installed = { "python", "js", "codelldb", "delve" }, handlers = {} },
+			},
+			{ "theHamsta/nvim-dap-virtual-text", opts = { commented = true } },
 		},
 		keys = {
 			"<F5>", "<F10>", "<F11>", "<F12>",
@@ -186,19 +193,5 @@ return {
 				vim.notify("Exception breakpoints: " .. exception_labels[exception_state])
 			end, { desc = "DAP: cycle exception breakpoints" })
 		end,
-	},
-	{
-		"jay-babu/mason-nvim-dap.nvim",
-		dependencies = "williamboman/mason.nvim",
-		opts = {
-			ensure_installed = { "python", "js", "codelldb", "delve" },
-			handlers = {},
-		},
-	},
-	{
-		"theHamsta/nvim-dap-virtual-text",
-		opts = {
-			commented = true,
-		},
 	},
 }

@@ -51,6 +51,12 @@ return {
     local mason_tool_installer = require("mason-tool-installer")
 
     mason_tool_installer.setup({
+      -- mason-tool-installer по умолчанию требует mason-nvim-dap.mappings.source,
+      -- а тот тянет dap.utils — из-за этого nvim-dap грузился на каждый старт
+      -- мимо своих keys-триггеров. Интеграция нужна только для резолва имён
+      -- dap-адаптеров в ensure_installed ниже; их там нет, адаптеры ставит
+      -- сам mason-nvim-dap из dap.lua.
+      integrations = { ["mason-nvim-dap"] = false },
       ensure_installed = {
         -- formatters
         "prettier",
