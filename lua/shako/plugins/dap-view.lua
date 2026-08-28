@@ -1,7 +1,14 @@
 return {
 	"igorlfs/nvim-dap-view",
 	dependencies = { "mfussenegger/nvim-dap" },
-	lazy = false,
+	-- Те же триггеры, что у nvim-dap (dap.lua): lazy=false тянул DAP на каждый
+	-- старт и обнулял keys-ленивость самого dap.
+	cmd = { "DapViewOpen", "DapViewToggle" },
+	keys = {
+		"<F5>", "<F10>", "<F11>", "<F12>",
+		"<leader>db", "<leader>dB", "<leader>dp", "<leader>dh", "<leader>de",
+		"<leader>dr", "<leader>dt", "<leader>dl", "<leader>dc", "<leader>dx",
+	},
 	---@module 'dap-view'
 	---@type dapview.Config
 	opts = {

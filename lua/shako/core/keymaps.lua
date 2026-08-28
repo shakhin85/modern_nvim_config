@@ -52,7 +52,8 @@ keymap.set("n", "<C-Up>", "<cmd>resize +2<CR>", { desc = "Increase window height
 -- Buffer management
 -- <leader>bd handled by snacks.bufdelete (smarter, no window close side-effects)
 keymap.set("n", "<leader>ba", ":bufdo bd<CR>", { desc = "Delete all buffers" })
-keymap.set("n", "<leader>bo", ":only<CR>", { desc = "Keep only current window" })
+-- <leader>bo занят bufferline (BufferLineCloseOthers) — «только это окно» живёт на <leader>wo
+keymap.set("n", "<leader>wo", ":only<CR>", { desc = "Keep only current window" })
 keymap.set("n", "<leader>bs", ":ls<CR>", { desc = "Show buffer list" })
 
 -- Debug keymaps - removed to avoid conflicts with nvim-dap plugin
@@ -68,4 +69,4 @@ keymap.set("n", "<S-Tab>", ":BufferLineCyclePrev<CR>", { desc = "Previous buffer
 keymap.set("n", "<C-n>", "<Nop>", { desc = "Disabled (vim-visual-multi conflict)" })
 
 -- Keymaps navigation
-keymap.set("n", "<leader>fk", "<cmd>Telescope keymaps<CR>", { desc = "Find keymaps" })
+-- <leader>fk — владелец snacks.picker (snacks.lua), дубль убран

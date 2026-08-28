@@ -26,21 +26,36 @@ local function buffer_query()
 end
 
 -- CSV-выгрузка: PG → psql \copy, MSSQL → sqlcmd -s,
+-- Пароль уходит третьим возвратом в env дочернего процесса, а не в argv:
+-- /proc/<pid>/cmdline читает любой локальный пользователь (та же причина, по
+-- которой <leader>Dg ниже обходит :GripConnect <url>).
 local function csv_cmd(url, query, path)
 	if url:match("^postgres") then
-		return { "psql", "-w", "--dbname", url, "-c", ("\\copy (%s) to '%s' csv header"):format(query, path) }
+		local user, pass = url:match("^postgres%a*://([^:/@]*):?([^@/]*)@")
+		local safe = url:gsub("^(postgres%a*://)[^@/]*@", "%1")
+		local env = {}
+		if user and user ~= "" then
+			env.PGUSER = user
+		end
+		if pass and pass ~= "" then
+			env.PGPASSWORD = pass
+		end
+		local cmd = { "psql", "-w", "--dbname", safe, "-c", ("\\copy (%s) to '%s' csv header"):format(query, path) }
+		return cmd, nil, env
 	elseif url:match("^sqlserver") then
 		local user, pass, host, port, db = url:match("^sqlserver://([^:/@]*):?([^/@]*)@?([^:/?]+):?(%d*)/([^?]+)")
 		if not host then
 			return nil, "Не разобрал sqlserver URL"
 		end
 		local cmd = { "sqlcmd", "-S", host .. (port ~= "" and ("," .. port) or ""), "-d", db, "-C", "-s", ",", "-W", "-Q", query, "-o", path }
+		local env = {}
 		if user ~= "" then
-			vim.list_extend(cmd, { "-U", user, "-P", pass })
+			vim.list_extend(cmd, { "-U", user })
+			env.SQLCMDPASSWORD = pass
 		else
 			table.insert(cmd, "-E")
 		end
-		return cmd
+		return cmd, nil, env
 	end
 	return nil, "CSV-экспорт поддержан для postgres/sqlserver"
 end
@@ -55,11 +70,11 @@ local function to_csv(path, on_done)
 	if not query then
 		return vim.notify("Пустой запрос", vim.log.levels.WARN)
 	end
-	local cmd, err = csv_cmd(url, query, path)
+	local cmd, err, env = csv_cmd(url, query, path)
 	if not cmd then
 		return vim.notify(err, vim.log.levels.WARN)
 	end
-	vim.system(cmd, { text = true }, function(o)
+	vim.system(cmd, { text = true, env = env }, function(o)
 		vim.schedule(function()
 			if o.code == 0 then
 				on_done(path)
@@ -166,6 +181,14 @@ return {
 			vim.api.nvim_create_autocmd("FileType", {
 				pattern = { "sql", "mysql", "plsql" },
 				callback = function(ev)
+					-- Заметкам nvim-dbee плагин тоже ставит filetype=sql
+					-- (dbee/ui/editor/init.lua), но b:dbui_db_key_name у них нет —
+					-- отсекаем по каталогу заметок, иначе им достаётся чужой b:db
+					-- (по нему живут completion/conform/sqlfluff) и второй <leader>S.
+					local notes = vim.fs.normalize(vim.fn.stdpath("state") .. "/dbee/notes")
+					if vim.startswith(vim.fs.normalize(vim.api.nvim_buf_get_name(ev.buf)), notes) then
+						return
+					end
 					if not vim.b[ev.buf].db and vim.g.dbs and vim.g.db_default then
 						attach_db(ev.buf, vim.g.dbs[vim.g.db_default])
 					end
