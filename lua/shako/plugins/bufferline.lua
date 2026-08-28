@@ -2,6 +2,9 @@ return {
   "akinsho/bufferline.nvim",
   dependencies = { "nvim-tree/nvim-web-devicons" },
   version = "*",
+  -- Без триггера lazy грузил его на старте; VeryLazy отрисовывает табы сразу
+  -- после UIEnter и снимает bufferline со стартового пути.
+  event = "VeryLazy",
   config = function()
     local bufferline = require("bufferline")
 

@@ -41,6 +41,8 @@ return {
 			"c",
 			"python",
 			"regex",
+			-- SQL-стек (dbee/dadbod): без парсера подсветка падает на vim-syntax
+			"sql",
 		}
 
 		local to_install = {}
