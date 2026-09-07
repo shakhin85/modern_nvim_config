@@ -12,34 +12,18 @@ local function attach_db(bufnr, url)
 	end)
 end
 
--- Запрос из буфера: выделение в visual-режиме, иначе весь буфер.
-local function buffer_query()
-	local lines
-	if vim.fn.mode():match("[vV]") then
-		vim.cmd([[normal! <Esc>]])
-		lines = vim.api.nvim_buf_get_lines(0, vim.fn.line("'<") - 1, vim.fn.line("'>"), false)
-	else
-		lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-	end
-	local query = vim.trim(table.concat(lines, "\n")):gsub(";%s*$", "")
-	return query ~= "" and query or nil
-end
+-- Запрос из буфера и разбор URL — в shako.dburl: тем же кодом пользуются
+-- живая psql-сессия и сверка схем.
+local dburl = require("shako.dburl")
+local buffer_query = dburl.buffer_query
 
 -- CSV-выгрузка: PG → psql \copy, MSSQL → sqlcmd -s,
 -- Пароль уходит третьим возвратом в env дочернего процесса, а не в argv:
 -- /proc/<pid>/cmdline читает любой локальный пользователь (та же причина, по
 -- которой <leader>Dg ниже обходит :GripConnect <url>).
 local function csv_cmd(url, query, path)
-	if url:match("^postgres") then
-		local user, pass = url:match("^postgres%a*://([^:/@]*):?([^@/]*)@")
-		local safe = url:gsub("^(postgres%a*://)[^@/]*@", "%1")
-		local env = {}
-		if user and user ~= "" then
-			env.PGUSER = user
-		end
-		if pass and pass ~= "" then
-			env.PGPASSWORD = pass
-		end
+	if dburl.is_pg(url) then
+		local safe, env = dburl.pg_split(url)
 		local cmd = { "psql", "-w", "--dbname", safe, "-c", ("\\copy (%s) to '%s' csv header"):format(query, path) }
 		return cmd, nil, env
 	elseif url:match("^sqlserver") then

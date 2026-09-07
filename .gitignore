@@ -4,5 +4,5 @@ lua/shako/dbs.local.lua
 imageclips/
 tmp/
 .grip/
-.task-record.json
+.task-record*
 CONTEXT.md
