@@ -112,6 +112,14 @@ return {
 				},
 				picker = "snacks",
 				prompts = prompts,
+				tools = {
+					-- claude поднимается через dgc: лаунчер dual-graph сканирует проект
+					-- и пробрасывает флаги (--resume/--continue) дальше в claude
+					claude = {
+						cmd = { "dgc" },
+						is_proc = "\\<dgc\\>\\|dual_graph_launch\\|\\<claude\\>",
+					},
+				},
 			},
 
 			copilot = {
