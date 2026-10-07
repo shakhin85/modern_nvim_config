@@ -18,6 +18,27 @@ local function strip_libpq_only(url)
 	return #kept > 0 and (base .. "?" .. table.concat(kept, "&")) or base
 end
 
+-- sqlserver: URL в форме dadbod/sqlcmd -> форма go-mssqldb. Без логина — Kerberos. Go-драйвер (gokrb5) не читает KEYRING-кэш по
+-- умолчанию, только FILE: берём KRB5CCNAME=FILE:… или кэш, который кладёт kinit
+-- для шары (/tmp/krb5cc_shal).
+local function sqlserver_url(url)
+	-- sqlcmd/ODBC понимают yes/no, go-mssqldb — только strconv.ParseBool.
+	url = url:gsub("([?&][Tt]rust[Ss]erver[Cc]ertificate=)[Yy][Ee][Ss]", "%1true")
+	-- У go-mssqldb путь URL — имя инстанса, а не база (иначе SPN MSSQLSvc/host:<db>).
+	local head, db, query = url:match("^(sqlserver://[^/?]+)/([^?]+)%??(.*)$")
+	if head then
+		url = head .. "?database=" .. db .. (query ~= "" and ("&" .. query) or "")
+	end
+	if url:match("^sqlserver://[^/]*@") then
+		return url
+	end
+	local ccache = (vim.env.KRB5CCNAME or ""):match("^FILE:(.+)$") or "/tmp/krb5cc_shal"
+	local sep = url:find("?", 1, true) and "&" or "?"
+	return url .. sep .. "authenticator=krb5&krb5-configfile=/etc/krb5.conf&krb5-credcachefile=" .. ccache
+end
+
+local fix_url = { postgres = strip_libpq_only, sqlserver = sqlserver_url }
+
 -- vim.g.dbs -> список коннектов dbee (name/type/url).
 local function connections()
 	local adapters = { postgres = "postgres", postgresql = "postgres", sqlserver = "sqlserver", mysql = "mysql", sqlite = "sqlite" }
@@ -26,7 +47,7 @@ local function connections()
 		local scheme = url:match("^(%a+)://")
 		local kind = scheme and adapters[scheme]
 		if kind then
-			table.insert(out, { name = name, type = kind, url = kind == "postgres" and strip_libpq_only(url) or url })
+			table.insert(out, { name = name, type = kind, url = fix_url[kind] and fix_url[kind](url) or url })
 		end
 	end
 	table.sort(out, function(a, b)
