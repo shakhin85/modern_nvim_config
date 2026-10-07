@@ -193,6 +193,10 @@ return {
 			-- sqlcmd от Microsoft (mssql-tools18) раньше go-sqlcmd из ~/go/bin: у go-sqlcmd
 			-- нет Kerberos, -E на Linux даёт «Login failed for user ''».
 			vim.env.PATH = "/opt/mssql-tools18/bin:" .. vim.env.PATH
+			-- Схему postgres:// vim-dadbod сам не знает: алиас ставит только
+			-- vim-dadbod-completion внутри fetch, то есть после первого sql-буфера.
+			-- Без этого :DB по postgres://-коннекту до него — «no adapter for postgres».
+			vim.g.db_adapter_postgres = "db#adapter#postgresql#"
 			-- Пароли PG — из Vault в PGPASSFILE (tmpfs), в URL их нет.
 			require("shako.vault_pgpass").sync()
 			vim.api.nvim_create_user_command("DbVaultRefresh", function()
