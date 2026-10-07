@@ -125,6 +125,10 @@ return {
       "taplo",
     }
 
+    -- ruff (поднимает mason-lspconfig) по умолчанию берёт utf-8, basedpyright — utf-16:
+    -- два клиента с разной кодировкой на одном буфере сдвигают позиции правок.
+    vim.lsp.config("ruff", { capabilities = { general = { positionEncodings = { "utf-16" } } } })
+
     for _, server in ipairs(servers) do
       local opts = {
         capabilities = capabilities,
