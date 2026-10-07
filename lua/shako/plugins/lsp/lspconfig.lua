@@ -87,7 +87,12 @@ return {
     local capabilities = require("blink.cmp").get_lsp_capabilities()
 
     -- Change the Diagnostic symbols in the sign column (gutter)
+    -- С 0.11 virtual_text выключен по умолчанию: без него ошибки lsp/nvim-lint
+    -- видны только значком в колонке.
     vim.diagnostic.config({
+      virtual_text = { current_line = true },
+      severity_sort = true,
+      float = { border = "rounded", source = true },
       signs = {
         text = {
           [vim.diagnostic.severity.ERROR] = " ",

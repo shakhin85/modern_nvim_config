@@ -23,6 +23,9 @@ return {
     })
 
     mason_lspconfig.setup({
+      -- v2 сам зовёт vim.lsp.enable для всего установленного. rust_analyzer
+      -- поднимает rustaceanvim — второй экземпляр дублирует диагностику и actions.
+      automatic_enable = { exclude = { "rust_analyzer" } },
       -- list of servers for mason to install
       ensure_installed = {
         "ts_ls", -- replaced tsserver
