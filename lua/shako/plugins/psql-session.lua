@@ -23,7 +23,8 @@ local function terminal(name)
 	-- некому, а \timing и рамки в интерактиве нужны.
 	sessions[name] = require("toggleterm.terminal").Terminal:new({
 		cmd = "psql -w --dbname " .. vim.fn.shellescape(safe),
-		env = env,
+		-- PSQLRC=/dev/null из init dadbod наследуется терминалом — возвращаем свой rc.
+		env = vim.tbl_extend("force", env or {}, { PSQLRC = vim.fn.expand("~/.psqlrc") }),
 		direction = "vertical",
 		close_on_exit = false, -- psql упал — сообщение должно остаться на экране
 		hidden = true,

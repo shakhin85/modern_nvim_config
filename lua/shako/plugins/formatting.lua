@@ -49,7 +49,9 @@ return {
       format_on_save = function(bufnr)
         -- Буферы dadbod-ui — это черновики запросов, а не исходники: переписывать их
         -- раскладку на каждом :w значит терять то, как запрос был набран.
-        if vim.b[bufnr].dbui_db_key_name then
+        -- Заметки nvim-dbee — те же черновики, только без b:dbui_db_key_name.
+        local notes = vim.fs.normalize(vim.fn.stdpath("state") .. "/dbee/notes")
+        if vim.b[bufnr].dbui_db_key_name or vim.startswith(vim.fs.normalize(vim.api.nvim_buf_get_name(bufnr)), notes) then
           return nil
         end
         return { lsp_format = "fallback", async = false, timeout_ms = 1000 }

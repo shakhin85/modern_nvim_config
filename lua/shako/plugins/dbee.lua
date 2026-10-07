@@ -3,6 +3,21 @@
 -- поверх него). Живёт отдельным файлом: проигравший удаляется одним rm.
 -- Коннекты не дублируем — те же vim.g.dbs из dbs.local.lua.
 
+-- Параметры только для libpq (psql). Go-драйвер lib/pq шлёт незнакомые ключи
+-- серверу как GUC, и коннект падает с FATAL unrecognized configuration parameter.
+local libpq_only = { gssencmode = true, keepalives = true, keepalives_idle = true, keepalives_interval = true, keepalives_count = true }
+
+local function strip_libpq_only(url)
+	local base, query = url:match("^([^?]*)%?(.*)$")
+	if not base then
+		return url
+	end
+	local kept = vim.tbl_filter(function(kv)
+		return not libpq_only[kv:match("^([^=]*)")]
+	end, vim.split(query, "&", { plain = true }))
+	return #kept > 0 and (base .. "?" .. table.concat(kept, "&")) or base
+end
+
 -- vim.g.dbs -> список коннектов dbee (name/type/url).
 local function connections()
 	local adapters = { postgres = "postgres", postgresql = "postgres", sqlserver = "sqlserver", mysql = "mysql", sqlite = "sqlite" }
@@ -11,7 +26,7 @@ local function connections()
 		local scheme = url:match("^(%a+)://")
 		local kind = scheme and adapters[scheme]
 		if kind then
-			table.insert(out, { name = name, type = kind, url = url })
+			table.insert(out, { name = name, type = kind, url = kind == "postgres" and strip_libpq_only(url) or url })
 		end
 	end
 	table.sort(out, function(a, b)

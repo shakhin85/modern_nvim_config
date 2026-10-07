@@ -1,8 +1,14 @@
 -- Привязать буфер к базе. Одного b:db мало: vim-dadbod-completion наполняет кэш
 -- схемы только по своему FileType-автокоманде, то есть до того, как b:db выставлен.
 -- Без явного fetch() completion молчит — ни таблиц, ни колонок по алиасу.
-local function attach_db(bufnr, url)
+local function attach_db(bufnr, url, refetch)
 	vim.b[bufnr].db = url
+	-- На FileType кэш наполнит автокоманда самого плагина (он грузится на старте
+	-- через blink, его FileType идёт после нашего). Второй fetch — лишний
+	-- синхронный db#connect. Явный fetch нужен только при смене базы в буфере.
+	if not refetch then
+		return
+	end
 	-- Через schedule: на FileType-событии lazy может ещё не успеть подгрузить
 	-- vim-dadbod-completion (он ft-ленивый), и функции просто нет в этот тик.
 	vim.schedule(function()
@@ -27,7 +33,11 @@ local function csv_cmd(url, query, path)
 		local cmd = { "psql", "-w", "--dbname", safe, "-c", ("\\copy (%s) to '%s' csv header"):format(query, path) }
 		return cmd, nil, env
 	elseif url:match("^sqlserver") then
-		local user, pass, host, port, db = url:match("^sqlserver://([^:/@]*):?([^/@]*)@?([^:/?]+):?(%d*)/([^?]+)")
+		-- Креды необязательны (Kerberos): без '@' вся authority — это host[:port].
+		local rest = url:match("^sqlserver://(.*)$")
+		local creds, hostpart = rest:match("^([^@/]*)@(.*)$")
+		local user, pass = (creds or ""):match("^([^:]*):?(.*)$")
+		local host, port, db = (hostpart or rest):match("^([^:/?]+):?(%d*)/([^?]+)")
 		if not host then
 			return nil, "Не разобрал sqlserver URL"
 		end
@@ -124,7 +134,7 @@ return {
 					local bufnr = vim.api.nvim_get_current_buf()
 					vim.ui.select(keys, { prompt = "DB for this buffer:" }, function(k)
 						if k then
-							attach_db(bufnr, vim.g.dbs[k])
+							attach_db(bufnr, vim.g.dbs[k], true)
 							vim.notify("b:db = " .. k .. " (схема подгружается)")
 						end
 					end)
