@@ -37,7 +37,10 @@ return {
 
     local lint_augroup = vim.api.nvim_create_augroup("lint", { clear = true })
 
-    vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost", "InsertLeave" }, {
+    -- Все линтеры здесь — процессы по 0.5–2 с (sqlfluff ~670 мс). BufEnter гонял их на
+    -- каждом переключении буфера, хотя диагностика буфера и так живёт; InsertLeave
+    -- с eslint_d подвешивает ввод (nvim-lint, репорт пользователей). Ручной — <leader>ml.
+    vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost" }, {
       group = lint_augroup,
       callback = function()
         lint.try_lint()
