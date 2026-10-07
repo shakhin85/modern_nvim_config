@@ -18,6 +18,23 @@ local function attach_db(bufnr, url, refetch)
 	end)
 end
 
+local dbee_notes = vim.fs.normalize(vim.fn.stdpath("state") .. "/dbee/notes")
+
+local function is_dbee_note(bufnr)
+	return vim.startswith(vim.fs.normalize(vim.api.nvim_buf_get_name(bufnr)), dbee_notes)
+end
+
+-- URL текущего коннекта dbee — исходный, из vim.g.dbs по имени: dbee.lua отдаёт
+-- драйверу URL без libpq-параметров (gssencmode и т.п.), а psql они нужны.
+local function dbee_current_url()
+	local ok, api = pcall(require, "dbee.api")
+	if not ok then
+		return nil
+	end
+	local ok_conn, conn = pcall(api.core.get_current_connection)
+	return ok_conn and conn and (vim.g.dbs or {})[conn.name] or nil
+end
+
 -- Запрос из буфера и разбор URL — в shako.dburl: тем же кодом пользуются
 -- живая psql-сессия и сверка схем.
 local dburl = require("shako.dburl")
@@ -171,6 +188,19 @@ return {
 			if ok and type(dbs) == "table" then
 				vim.g.dbs = dbs
 			end
+			-- Коннект в dbee сменили, пока заметка была в фоне: completion и диалект
+			-- sqlfluff должны идти за ним, а не за базой на момент открытия.
+			vim.api.nvim_create_autocmd("BufEnter", {
+				callback = function(ev)
+					if not is_dbee_note(ev.buf) then
+						return
+					end
+					local url = dbee_current_url()
+					if url and url ~= vim.b[ev.buf].db then
+						attach_db(ev.buf, url, true)
+					end
+				end,
+			})
 			-- Обычный .sql-файл: привязать к дефолтной базе, чтобы completion знал схему
 			vim.api.nvim_create_autocmd("FileType", {
 				pattern = { "sql", "mysql", "plsql" },
@@ -181,14 +211,10 @@ return {
 					-- vim-dadbod-completion и требует b:db, поэтому базу ставим, но
 					-- ТЕКУЩУЮ из dbee, а не дефолтную, и <leader>S не трогаем:
 					-- выполнение запроса у dbee своё.
-					local notes = vim.fs.normalize(vim.fn.stdpath("state") .. "/dbee/notes")
-					if vim.startswith(vim.fs.normalize(vim.api.nvim_buf_get_name(ev.buf)), notes) then
-						local ok, api = pcall(require, "dbee.api")
-						if ok then
-							local ok_conn, conn = pcall(api.core.get_current_connection)
-							if ok_conn and conn and conn.url then
-								attach_db(ev.buf, conn.url)
-							end
+					if is_dbee_note(ev.buf) then
+						local url = dbee_current_url()
+						if url then
+							attach_db(ev.buf, url)
 						end
 						return
 					end
