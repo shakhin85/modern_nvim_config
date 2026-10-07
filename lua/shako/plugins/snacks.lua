@@ -12,7 +12,14 @@ return {
 		-- Better vim.ui.input
 		input = { enabled = true },
 		-- Picker (includes vim.ui.select override)
-		picker = { enabled = true, ui_select = true },
+		-- files из ~ вешал UI: 90% из 192k файлов — кэш Go-модулей (~/go/pkg)
+		picker = {
+			enabled = true,
+			ui_select = true,
+			sources = {
+				files = { exclude = { "**/go/pkg", "node_modules", "__pycache__" } },
+			},
+		},
 		-- LSP-aware file rename
 		rename = { enabled = true },
 		-- Smart buffer delete (no window close side-effects)
