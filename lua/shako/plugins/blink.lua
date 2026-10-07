@@ -54,8 +54,10 @@ return {
       },
     },
 
-    -- experimental signature help support
-    -- signature = { enabled = true }
+    -- Документация к пункту — сама, с задержкой, чтобы не мигала при листании.
+    completion = { documentation = { auto_show = true, auto_show_delay_ms = 300 } },
+    -- Подсказка параметров функции при вводе (в 1.x уже не experimental).
+    signature = { enabled = true },
   },
   -- allows extending the providers array elsewhere in your config
   -- without having to redefine it
