@@ -190,6 +190,14 @@ return {
 			if ok and type(dbs) == "table" then
 				vim.g.dbs = dbs
 			end
+			-- sqlcmd от Microsoft (mssql-tools18) раньше go-sqlcmd из ~/go/bin: у go-sqlcmd
+			-- нет Kerberos, -E на Linux даёт «Login failed for user ''».
+			vim.env.PATH = "/opt/mssql-tools18/bin:" .. vim.env.PATH
+			-- Пароли PG — из Vault в PGPASSFILE (tmpfs), в URL их нет.
+			require("shako.vault_pgpass").sync()
+			vim.api.nvim_create_user_command("DbVaultRefresh", function()
+				require("shako.vault_pgpass").sync(true)
+			end, { desc = "Перечитать пароли БД из Vault" })
 			-- Коннект в dbee сменили, пока заметка была в фоне: completion и диалект
 			-- sqlfluff должны идти за ним, а не за базой на момент открытия.
 			vim.api.nvim_create_autocmd("BufEnter", {

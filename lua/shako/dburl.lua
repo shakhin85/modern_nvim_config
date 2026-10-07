@@ -24,7 +24,7 @@ end
 
 -- URL без пароля, но с юзером — форма для инструментов, которые ходят сразу в
 -- две базы под разными ролями (одной PGUSER там не обойтись). Пароль такой
--- клиент возьмёт из PGPASSFILE, см. M.pgpass_file.
+-- клиент возьмёт из PGPASSFILE, см. shako.vault_pgpass.
 -- Схему приводим к postgresql://: SQLAlchemy 2.x короткую postgres:// не принимает.
 function M.pg_url_nopass(url)
 	local u = url:gsub("^(postgres%a*://[^:/@]*):[^@/]*@", "%1@")
@@ -44,22 +44,6 @@ function M.pg_parts(url)
 		port = port ~= "" and port or "5432",
 		db = db,
 	}
-end
-
--- Временный .pgpass под перечисленные коннекты. Возвращает путь; вызывающий
--- обязан удалить файл после завершения процесса.
-function M.pgpass_file(names)
-	local lines = {}
-	for _, name in ipairs(names) do
-		local parts = M.pg_parts((vim.g.dbs or {})[name] or "")
-		if parts and parts.pass ~= "" then
-			table.insert(lines, table.concat({ parts.host, parts.port, parts.db, parts.user, parts.pass }, ":"))
-		end
-	end
-	local path = vim.fn.tempname()
-	vim.fn.writefile(lines, path)
-	vim.uv.fs_chmod(path, 384) -- 0600: libpq молча игнорирует файл с более широкими правами
-	return path
 end
 
 -- Имена PG-коннектов из vim.g.dbs, по алфавиту.

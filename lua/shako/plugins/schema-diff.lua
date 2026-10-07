@@ -72,19 +72,16 @@ local function migra_diff()
 		return vim.notify('migra не установлен: uv tool install --python 3.11 --with "setuptools<81" "migra[pg]"', vim.log.levels.WARN)
 	end
 	pick_pair("migra: из какой базы:", "migra: к какой привести:", function(a, b)
-		-- Две базы под разными ролями, одной PGUSER не обойтись — пароли идут
-		-- через временный .pgpass, а не в argv.
-		local passfile = dburl.pgpass_file({ a, b })
+		-- Две базы под разными ролями, одной PGUSER не обойтись — пароли migra
+		-- берёт из общего PGPASSFILE (shako.vault_pgpass), а не из argv.
 		local url_a = dburl.pg_url_nopass(vim.g.dbs[a])
 		local url_b = dburl.pg_url_nopass(vim.g.dbs[b])
 		-- --unsafe обязателен: без него migra МОЛЧА пропускает DROP-ы, и неполный
 		-- вывод читается как «различий нет».
 		vim.system({ "migra", "--unsafe", url_a, url_b }, {
 			text = true,
-			env = { PGPASSFILE = passfile },
 		}, function(o)
 			vim.schedule(function()
-				vim.fn.delete(passfile)
 				-- Коды migra: 0 — схемы совпали, 2 — есть различия, 1 — ошибка.
 				-- stderr непустой всегда (deprecation-warning), признаком сбоя не служит.
 				if o.code == 0 then
