@@ -95,6 +95,7 @@ return {
 					float = {
 						width = 0.9,
 						height = 0.85,
+						border = "rounded", -- без него float берёт пустой 'winborder' и рамки нет
 					},
 					split = {
 						width = 80,
