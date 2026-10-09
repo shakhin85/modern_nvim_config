@@ -126,6 +126,34 @@ return {
 				status = { enabled = false },
 			},
 		})
+
+		-- opencode не используем, а его session-бэкенд на каждый список сессий
+		-- зовёт `lsof -iTCP` (~2 с на этом хосте) — <leader>ap открывался с задержкой.
+		-- Убрать до первого Config.tools(): sk/cli/opencode.lua регистрирует бэкенд при загрузке.
+		require("sidekick.config").cli.tools.opencode = nil
+
+		-- WORKAROUND: sidekick считает терминал готовым, когда вывод >5 строк и
+		-- замер на 500 мс (или через 5 с). dgc печатает баннер и ~5 с поднимает
+		-- MCP до старта claude — текст из <leader>ap/<leader>av уходил в dgc.
+		-- Для claude ждём заголовок терминала «Claude Code»: его ставит сам claude.
+		local Terminal = require("sidekick.cli.terminal")
+		local on_ready = Terminal.on_ready
+		function Terminal:on_ready()
+			if self.tool.name ~= "claude" then
+				return on_ready(self)
+			end
+			local deadline = vim.uv.now() + 30000
+			local timer = assert(vim.uv.new_timer())
+			timer:start(0, 100, vim.schedule_wrap(function()
+				local title = self:buf_valid() and vim.b[self.buf].term_title or ""
+				if title:find("Claude Code", 1, true) or vim.uv.now() > deadline or not self:buf_valid() then
+					timer:stop()
+					timer:close()
+					-- после заголовка claude ещё ~300 мс включает raw-режим ввода
+					vim.defer_fn(function() on_ready(self) end, 500)
+				end
+			end))
+		end
 	end,
 
 	keys = {
