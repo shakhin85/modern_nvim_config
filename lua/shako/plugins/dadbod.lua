@@ -257,8 +257,11 @@ return {
 		dependencies = { "tpope/vim-dadbod" },
 		ft = { "sql", "mysql", "plsql", "sqlite" },
 		-- Апстрим берёт схему из INFORMATION_SCHEMA.COLUMNS, где нет матвью
-		-- PostgreSQL. Патч переносит запросы на pg_class; подробности и откат —
+		-- PostgreSQL. Патч переносит запросы на pg_class; подробности —
 		-- в shako.patches.dadbod_completion.
+		init = function(plugin)
+			require("shako.patches.dadbod_completion").setup(plugin.dir)
+		end,
 		build = function(plugin)
 			print(require("shako.patches.dadbod_completion").apply(plugin.dir))
 		end,
