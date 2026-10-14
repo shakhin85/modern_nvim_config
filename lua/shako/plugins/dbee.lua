@@ -56,6 +56,28 @@ local function connections()
 	return out
 end
 
+-- Готовый .sql-файл (или выделение) — в dbee: результат таблицей в Results.
+-- Коннект dbee переключаем на базу буфера (b:db), иначе запрос уйдёт туда,
+-- что выбрано в drawer.
+local function execute_buffer()
+	local query = require("shako.dburl").buffer_query()
+	if not query then
+		return
+	end
+	local core = require("dbee.api").core
+	local name = vim.iter(vim.g.dbs or {}):find(function(_, url)
+		return url == vim.b.db
+	end)
+	for _, source in ipairs(core.get_sources()) do
+		for _, conn in ipairs(core.source_get_connections(source:name())) do
+			if conn.name == name then
+				core.set_current_connection(conn.id)
+			end
+		end
+	end
+	require("dbee").execute(query)
+end
+
 return {
 	"kndndrj/nvim-dbee",
 	-- Плагин вешает автокоманду на BufModifiedSet, которого в Neovim 0.13-dev нет;
@@ -66,6 +88,7 @@ return {
 	end,
 	keys = {
 		{ "<leader>Db", function() require("dbee").toggle() end, desc = "Dbee: toggle UI" },
+		{ "<leader>DE", execute_buffer, ft = { "sql", "mysql", "plsql" }, mode = { "n", "x" }, desc = "Dbee: выполнить файл/выделение" },
 		{
 			"<leader>DB",
 			function()
