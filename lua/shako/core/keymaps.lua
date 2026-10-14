@@ -41,10 +41,18 @@ keymap.set("n", "<C-k>", "<C-w>k", { desc = "Move to window above" })
 keymap.set("n", "<C-l>", "<C-w>l", { desc = "Move to right window" })
 
 -- Window resizing: Ctrl+стрелки — только сплиты nvim (Alt+hjkl забирает zellij под focus)
-keymap.set("n", "<C-Left>", "<cmd>vertical resize -3<CR>", { desc = "Decrease window width" })
-keymap.set("n", "<C-Right>", "<cmd>vertical resize +3<CR>", { desc = "Increase window width" })
-keymap.set("n", "<C-Down>", "<cmd>resize -2<CR>", { desc = "Decrease window height" })
-keymap.set("n", "<C-Up>", "<cmd>resize +2<CR>", { desc = "Increase window height" })
+-- Стрелка двигает границу в свою сторону. resize меняет размер ТЕКУЩЕГО окна, поэтому
+-- у правого/нижнего окна (соседа за ним нет) знак меняется: иначе граница едет наоборот.
+local function move_border(next_dir, cmd, step)
+	return function()
+		local sign = vim.fn.winnr(next_dir) ~= vim.fn.winnr() and 1 or -1
+		vim.cmd(("%s %+d"):format(cmd, sign * step))
+	end
+end
+keymap.set("n", "<C-Left>", move_border("l", "vertical resize", -3), { desc = "Move window border left" })
+keymap.set("n", "<C-Right>", move_border("l", "vertical resize", 3), { desc = "Move window border right" })
+keymap.set("n", "<C-Up>", move_border("j", "resize", -2), { desc = "Move window border up" })
+keymap.set("n", "<C-Down>", move_border("j", "resize", 2), { desc = "Move window border down" })
 
 -- Flash-enhanced window and buffer navigation (defined in flash.lua)
 -- <leader>sw for window jump, <leader>sb for buffer jump
