@@ -73,4 +73,14 @@ function M.buffer_query()
 	return query ~= "" and query or nil
 end
 
+-- Диалект sqlfluff по базе буфера (b:db), без неё — по filetype. Общий для
+-- линтера и formatter: иначе валидный T-SQL разбирается как postgres.
+local sqlfluff_dialect_by_scheme = { postgres = "postgres", postgresql = "postgres", sqlserver = "tsql", sqlite = "sqlite" }
+local sqlfluff_dialect_by_ft = { mysql = "mysql", plsql = "oracle" }
+
+function M.sqlfluff_dialect(buf)
+	local scheme = (vim.b[buf].db or ""):match("^(%a[%w+.-]*):")
+	return sqlfluff_dialect_by_scheme[scheme] or sqlfluff_dialect_by_ft[vim.bo[buf].filetype] or "postgres"
+end
+
 return M

@@ -17,20 +17,12 @@ return {
 
     -- sqlfluff: диалект по схеме b:db — иначе валидный T-SQL летит как синтаксическая
     -- ошибка postgres. Правила и исключения — в ~/.sqlfluff (→ nvim/sqlfluff/user.cfg).
-    local dialect_by_scheme = {
-      postgres = "postgres",
-      postgresql = "postgres",
-      sqlserver = "tsql",
-      sqlite = "sqlite",
-    }
-
     lint.linters.sqlfluff.args = {
       "lint",
       "--format=json",
       "--dialect",
       function()
-        local scheme = (vim.b.db or ""):match("^(%a[%w+.-]*):")
-        return dialect_by_scheme[scheme] or "postgres"
+        return require("shako.dburl").sqlfluff_dialect(0)
       end,
       "-",
     }

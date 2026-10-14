@@ -4,26 +4,16 @@ return {
   config = function()
     local conform = require("conform")
 
-    -- sql-formatter по умолчанию говорит на «basic sql» и ломает диалектный синтаксис
-    -- (TOP/[скобки] в T-SQL, ::cast в PG). Диалект берём из подключения буфера.
-    local sql_language_by_scheme = {
-      postgres = "postgresql",
-      postgresql = "postgresql",
-      sqlserver = "tsql",
-      sqlite = "sqlite",
-    }
-
-    -- Без b:db (файл ещё не подключён) диалект берём хотя бы из filetype.
-    local sql_language_by_ft = { mysql = "mysql", plsql = "plsql" }
-
     conform.setup({
       formatters = {
-        sql_formatter = {
-          prepend_args = function(_, ctx)
-            local scheme = (vim.b[ctx.buf].db or ""):match("^(%a[%w+.-]*):")
-            local ft = vim.bo[ctx.buf].filetype
-            return { "-l", sql_language_by_scheme[scheme] or sql_language_by_ft[ft] or "postgresql" }
+        -- sqlfluff правит только раскладку и регистр ключевых слов: смысловые правила
+        -- (convention/structure) переписывали бы запрос на каждом :w.
+        -- Ширина, выравнивание алиасов, позиции join/where — в ~/.sqlfluff.
+        sqlfluff = {
+          args = function(_, ctx)
+            return { "fix", "--rules", "layout,capitalisation", "--dialect", require("shako.dburl").sqlfluff_dialect(ctx.buf), "-" }
           end,
+          require_cwd = false,
         },
       },
       formatters_by_ft = {
@@ -42,9 +32,9 @@ return {
         python = { "ruff_format" },
         go = { "gofumpt" },
         toml = { "taplo" },
-        sql = { "sql_formatter" },
-        mysql = { "sql_formatter" },
-        plsql = { "sql_formatter" },
+        sql = { "sqlfluff" },
+        mysql = { "sqlfluff" },
+        plsql = { "sqlfluff" },
       },
       format_on_save = function(bufnr)
         -- Буферы dadbod-ui — это черновики запросов, а не исходники: переписывать их
@@ -54,7 +44,9 @@ return {
         if vim.b[bufnr].dbui_db_key_name or vim.startswith(vim.fs.normalize(vim.api.nvim_buf_get_name(bufnr)), notes) then
           return nil
         end
-        return { lsp_format = "fallback", async = false, timeout_ms = 1000 }
+        -- sqlfluff разбирает запрос ~1.2 с: с лимитом 1 с conform обрывал бы его.
+        local sql = vim.tbl_contains({ "sql", "mysql", "plsql" }, vim.bo[bufnr].filetype)
+        return { lsp_format = "fallback", async = false, timeout_ms = sql and 5000 or 1000 }
       end,
     })
 
@@ -62,7 +54,7 @@ return {
       conform.format({
         lsp_format = "fallback",
         async = false,
-        timeout_ms = 1000,
+        timeout_ms = 5000, -- ручной вызов: sqlfluff ~1.2 с
       })
     end, { desc = "Format file or range (in visual mode)" })
   end,
