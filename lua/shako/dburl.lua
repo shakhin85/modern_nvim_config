@@ -60,9 +60,11 @@ end
 
 -- Строки запроса: выделение в visual-режиме, иначе весь буфер.
 function M.buffer_lines()
-	if vim.fn.mode():match("[vV]") then
-		vim.cmd([[normal! <Esc>]])
-		return vim.api.nvim_buf_get_lines(0, vim.fn.line("'<") - 1, vim.fn.line("'>"), false)
+	if vim.fn.mode():match("[vV\22]") then
+		-- Границы живого выделения: метки '< '> ставятся только после выхода из visual.
+		local a, b = vim.fn.line("v"), vim.fn.line(".")
+		vim.api.nvim_feedkeys(vim.keycode("<Esc>"), "n", false)
+		return vim.api.nvim_buf_get_lines(0, math.min(a, b) - 1, math.max(a, b), false)
 	end
 	return vim.api.nvim_buf_get_lines(0, 0, -1, false)
 end
