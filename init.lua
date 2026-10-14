@@ -36,31 +36,6 @@ end
 
 require("shako.lazy")
 
-local function get_lemonade_cmd()
-	-- Проверяем WSL
-	local is_wsl = (vim.uv.os_uname().release or ""):lower():find("microsoft") ~= nil
-
-	if is_wsl then
-		-- WSL - получаем IP Windows хоста
-		local ip_handle = io.popen("ip route show | grep -i default | awk '{ print $3}'")
-		local windows_ip = ip_handle:read("*a"):gsub("%s+", "")
-		ip_handle:close()
-
-		return {
-			copy = string.format("lemonade --host=%s --port=2489 copy", windows_ip),
-			paste = string.format("lemonade --host=%s --port=2489 paste | sed 's/\\r$//'", windows_ip),
-		}
-	else
-		-- Нативный Linux
-		return {
-			copy = "lemonade copy",
-			paste = "lemonade paste",
-		}
-	end
-end
-
-local lemonade_cmd = get_lemonade_cmd()
-
 -- Clipboard configuration
 if vim.fn.has("win32") == 1 then
 	-- Windows: use win32yank
@@ -76,20 +51,9 @@ if vim.fn.has("win32") == 1 then
 		},
 		cache_enabled = 0,
 	}
-elseif vim.fn.executable("lemonade") == 1 then
-	-- Linux: use lemonade (если нет — nvim сам подберёт xclip/wl-copy)
-	vim.g.clipboard = {
-		name = "lemonade",
-		copy = {
-			["+"] = lemonade_cmd.copy,
-			["*"] = lemonade_cmd.copy,
-		},
-		paste = {
-			["+"] = lemonade_cmd.paste,
-			["*"] = lemonade_cmd.paste,
-		},
-		cache_enabled = 1,
-	}
+else
+	-- Linux (herdr или голый ssh): OSC 52, буфер кладёт терминал клиента (herdr / Windows Terminal)
+	vim.g.clipboard = "osc52"
 end
 
 -- Cached Python path detection (lazy-loaded on first Python file)
