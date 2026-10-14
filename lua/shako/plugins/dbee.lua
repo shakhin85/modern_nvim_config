@@ -96,6 +96,25 @@ return {
 			end,
 			desc = "Dbee: store result as CSV",
 		},
+		{
+			"<leader>DX",
+			function()
+				-- dbee пишет только csv/json: весь результат в CSV, затем scripts/csv2xlsx.py.
+				local base = vim.fn.expand("~") .. "/dbee-" .. os.date("%Y%m%d-%H%M%S")
+				require("dbee").store("csv", "file", { extra_arg = base .. ".csv" })
+				local script = vim.fn.stdpath("config") .. "/scripts/csv2xlsx.py"
+				vim.system({ "uv", "run", "--script", script, base .. ".csv", base .. ".xlsx" }, { text = true }, function(o)
+					vim.schedule(function()
+						if o.code ~= 0 then
+							return vim.notify("xlsx не собран:\n" .. o.stderr, vim.log.levels.ERROR)
+						end
+						vim.fn.delete(base .. ".csv")
+						vim.notify("Сохранено: " .. base .. ".xlsx")
+					end)
+				end)
+			end,
+			desc = "Dbee: store result as XLSX",
+		},
 	},
 	config = function()
 		require("dbee").setup({
