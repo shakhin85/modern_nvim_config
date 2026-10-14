@@ -5,6 +5,11 @@
 local M = {}
 
 M.path = "secret/products/data-and-analytics/nvim-dbs"
+-- Коннекты со своим секретом (ключ password): читаем его напрямую, без копии в M.path,
+-- чтобы ротация пароля не оставляла протухшую копию.
+M.own = {
+	dwh_1c_dev = "secret/products/data-and-analytics/dev/dwh_1c",
+}
 -- tmpfs: файл исчезает при перезагрузке и не попадает в бэкапы домашнего каталога.
 M.file = ("/run/user/%d/nvim-pgpass"):format(vim.uv.getuid())
 
@@ -34,17 +39,37 @@ function M.sync(force)
 	if not force and vim.uv.fs_stat(M.file) then
 		return
 	end
-	vim.system({ "vault", "kv", "get", "-format=json", M.path }, { text = true }, function(o)
-		vim.schedule(function()
-			if o.code ~= 0 then
-				return vim.notify("Vault: пароли БД не получены\n" .. o.stderr, vim.log.levels.WARN)
-			end
-			M.write(vim.json.decode(o.stdout).data.data)
-			if force then
-				vim.notify("PGPASSFILE обновлён из Vault")
-			end
+	local sources = { [M.path] = false }
+	for name, path in pairs(M.own) do
+		sources[path] = name
+	end
+	local passwords, errors, pending = {}, {}, vim.tbl_count(sources)
+	for path, name in pairs(sources) do
+		vim.system({ "vault", "kv", "get", "-format=json", path }, { text = true }, function(o)
+			vim.schedule(function()
+				if o.code ~= 0 then
+					table.insert(errors, path .. ": " .. o.stderr)
+				else
+					local data = vim.json.decode(o.stdout).data.data
+					if name then
+						passwords[name] = data.password
+					else
+						passwords = vim.tbl_extend("keep", passwords, data)
+					end
+				end
+				pending = pending - 1
+				if pending > 0 then
+					return
+				end
+				M.write(passwords)
+				if #errors > 0 then
+					vim.notify("Vault: часть паролей БД не получена, повтор: :DbVaultRefresh\n" .. table.concat(errors, "\n"), vim.log.levels.WARN)
+				elseif force then
+					vim.notify("PGPASSFILE обновлён из Vault")
+				end
+			end)
 		end)
-	end)
+	end
 end
 
 return M
