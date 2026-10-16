@@ -137,6 +137,9 @@ return {
 			"kristijanhusak/vim-dadbod-completion",
 		},
 		cmd = { "DBUI", "DBUIToggle", "DBUIAddConnection", "DBUIFindBuffer" },
+		-- Окно результата :DB из обычного .sql: ftplugin/dbout.vim лежит в DBUI,
+		-- без загрузки нет <C-]> (прыжок по FK), vic, yh, <leader>R.
+		ft = "dbout",
 		keys = {
 			{ "<leader>Du", "<cmd>DBUIToggle<CR>", desc = "Toggle DB UI" },
 			{ "<leader>Da", "<cmd>DBUIAddConnection<CR>", desc = "Add DB connection" },
@@ -168,6 +171,9 @@ return {
 			-- Встроенный ftplugin/sql.vim вешает в insert <Left>/<Right> на
 			-- sqlcomplete#Drill* и пачку <C-C>…-маппингов: стрелки перестают двигать
 			-- курсор, <C-C> ждёт timeoutlen. Дополнение у нас — blink + dadbod.
+			-- filetype=dbout ставит autocmd из plugin/db_ui.vim, то есть только после
+			-- загрузки DBUI; без этого ft-триггер выше никогда не сработает.
+			vim.filetype.add({ extension = { dbout = "dbout" } })
 			vim.g.omni_sql_no_default_maps = 1
 			vim.g.loaded_sql_completion = 1
 			vim.g.db_ui_use_nerd_fonts = 1
