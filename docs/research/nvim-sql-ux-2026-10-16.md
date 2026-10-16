@@ -58,4 +58,4 @@
 | B5 | Helper'ы Size/Indexes для PG и MSSQL | dadbod-ui #table-helpers | сделано (Size) |
 | B6 | Коннекты dbee из `vim.g.dbs` (MemorySource) | nvim-dbee README | заблокировано: dbee.lua у сессии nvim-06 |
 | B7 | `loaded_sql_completion` — выключить Vim SQL-omni | LazyVim extras/lang/sql | сделано |
-| B8 | `application_name=nvim` в DSN, ширина колонок sqlcmd | libpq docs, dadbod-ui #283 | todo |
+| B8 | `application_name=nvim` в DSN, ширина колонок sqlcmd | libpq docs, dadbod-ui #283 | PGAPPNAME=nvim сделано; ширину sqlcmd не трогал — шире 256 раздувает каждую nvarchar(max)-колонку |
