@@ -1,0 +1,35 @@
+{
+  "CTE": {
+    "prefix": "cte",
+    "body": ["WITH ${1:name} AS (", "\t${2:SELECT 1}", ")", "SELECT *", "FROM $1${0}"],
+    "description": "WITH … AS ( … ) SELECT"
+  },
+  "CTE next": {
+    "prefix": "ctea",
+    "body": [", ${1:name} AS (", "\t${0:SELECT 1}", ")"],
+    "description": "Следующий CTE в цепочке"
+  },
+  "EXPLAIN ANALYZE": {
+    "prefix": "explain",
+    "body": ["EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)", "${0}"],
+    "description": "PostgreSQL: план с фактическим выполнением"
+  },
+  "SHOWPLAN": {
+    "prefix": "showplan",
+    "body": ["SET SHOWPLAN_TEXT ON", "GO", "${0}", "GO", "SET SHOWPLAN_TEXT OFF", "GO"],
+    "description": "MSSQL: оценочный план без выполнения"
+  },
+  "MERGE": {
+    "prefix": "merge",
+    "body": [
+      "MERGE INTO ${1:target} AS t",
+      "USING ${2:source} AS s",
+      "\tON t.${3:id} = s.$3",
+      "WHEN MATCHED THEN",
+      "\tUPDATE SET ${4:col} = s.$4",
+      "WHEN NOT MATCHED THEN",
+      "\tINSERT (${5:$3, $4}) VALUES (${6:s.$3, s.$4});${0}"
+    ],
+    "description": "MERGE (PostgreSQL 15+ / MSSQL)"
+  }
+}

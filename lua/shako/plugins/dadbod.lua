@@ -142,6 +142,8 @@ return {
 			{ "<leader>Da", "<cmd>DBUIAddConnection<CR>", desc = "Add DB connection" },
 			{ "<leader>Df", "<cmd>DBUIFindBuffer<CR>", desc = "Find DB buffer" },
 			{ "<leader>Dc", export_csv, mode = { "n", "x" }, desc = "Export query result to CSV" },
+			{ "<leader>Do", function() require("shako.sql_ux").saved_queries() end, desc = "Saved queries (picker)" },
+			{ "<leader>DO", function() require("shako.sql_ux").grep_saved_queries() end, desc = "Grep saved queries" },
 			{ "<leader>Dv", inspect_result, mode = { "n", "x" }, desc = "Inspect result in visidata/csvlens" },
 			{
 				"<leader>Ds",
@@ -173,6 +175,7 @@ return {
 			vim.g.db_ui_win_position = "left"
 			vim.g.db_ui_winwidth = 35
 			vim.g.db_ui_use_nvim_notify = 1
+			require("shako.sql_ux").setup_timing()
 			vim.g.db_ui_table_helpers = {
 				sqlserver = {
 					List = "SELECT TOP 200 * FROM {optional_schema}{table}",
@@ -183,6 +186,7 @@ return {
 				postgresql = {
 					Count = "SELECT count(*) AS cnt FROM {optional_schema}{table}",
 					Sample = "SELECT * FROM {optional_schema}{table} ORDER BY random() LIMIT 20",
+					Explain = "EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM {optional_schema}{table} LIMIT 200",
 				},
 			}
 			-- Подключения — в git-ignored lua/shako/dbs.local.lua (см. dbs.local.lua.example)
@@ -232,21 +236,21 @@ return {
 						end
 						return
 					end
-					if not vim.b[ev.buf].db and vim.g.dbs and vim.g.db_default then
-						attach_db(ev.buf, vim.g.dbs[vim.g.db_default])
+					-- Сохранённый запрос DBUI (<save_location>/<база>/файл) — к своей базе.
+					local sql_ux = require("shako.sql_ux")
+					local saved = sql_ux.saved_query_db(ev.buf)
+					if not vim.b[ev.buf].db and vim.g.dbs and (saved or vim.g.db_default) then
+						attach_db(ev.buf, vim.g.dbs[saved or vim.g.db_default])
 					end
 					-- <leader>S из dadbod-ui живёт только внутри его буферов; в обычном
-					-- .sql-файле выполнять запрос нечем, заводим сами: весь буфер в
-					-- normal, выделение — в visual (та же логика, что у <leader>Dc/Dv).
-					-- Через schedule и с проверкой b:dbui_db_key_name: у буферов самого
-					-- DBUI тоже filetype=sql, и перебивать их выполнение нельзя — оно
-					-- умеет bind-параметры и роутинг результата в окно DBUI.
+					-- .sql-файле выполнять запрос нечем, заводим сами (shako.sql_ux):
+					-- буфер, выделение, statement под курсором, bind-параметры.
+					-- Через schedule: b:dbui_db_key_name у буферов DBUI появляется после
+					-- FileType, а их <leader>S/<leader>E перебивать нельзя.
 					vim.schedule(function()
-						if not vim.api.nvim_buf_is_valid(ev.buf) or vim.b[ev.buf].dbui_db_key_name then
-							return
+						if vim.api.nvim_buf_is_valid(ev.buf) then
+							sql_ux.setup_buffer(ev.buf)
 						end
-						vim.keymap.set("n", "<leader>S", "<Cmd>%DB<CR>", { buffer = ev.buf, desc = "Execute buffer against b:db" })
-						vim.keymap.set("x", "<leader>S", "db#op_exec()", { buffer = ev.buf, expr = true, desc = "Execute selection against b:db" })
 					end)
 				end,
 			})

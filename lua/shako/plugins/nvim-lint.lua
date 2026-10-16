@@ -27,6 +27,41 @@ return {
       "-",
     }
 
+    -- squawk: опасные для прода миграции PostgreSQL (блокирующий DDL, NOT NULL без
+    -- default, индекс без CONCURRENTLY). Строки в gcc-выводе 0-based. Только PG-буферы:
+    -- T-SQL squawk не разберёт. Ставится `uv tool install squawk-cli`.
+    lint.linters.squawk = {
+      cmd = "squawk",
+      stdin = true,
+      args = { "--reporter", "gcc", "--stdin-filepath", "stdin.sql" },
+      ignore_exitcode = true,
+      -- Свой парсер: from_pattern ждёт 1-based строки и обрезает 0 до 0 раньше offset.
+      parser = function(output)
+        local diags = {}
+        for line in output:gmatch("[^\n]+") do
+          local lnum, col, sev, code, msg = line:match("^[^:]+:(%d+):(%d+): (%w+): ([%w-]+) (.*)$")
+          if lnum then
+            table.insert(diags, {
+              lnum = tonumber(lnum),
+              col = tonumber(col),
+              severity = sev == "error" and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.WARN,
+              code = code,
+              message = msg,
+              source = "squawk",
+            })
+          end
+        end
+        return diags
+      end,
+    }
+
+    local function lint_buffer()
+      lint.try_lint()
+      if vim.bo.filetype == "sql" and (vim.b.db or ""):match("^postgres") and vim.fn.executable("squawk") == 1 then
+        lint.try_lint("squawk")
+      end
+    end
+
     local lint_augroup = vim.api.nvim_create_augroup("lint", { clear = true })
 
     -- Все линтеры здесь — процессы по 0.5–2 с (sqlfluff ~670 мс). BufEnter гонял их на
@@ -34,13 +69,9 @@ return {
     -- с eslint_d подвешивает ввод (nvim-lint, репорт пользователей). Ручной — <leader>ml.
     vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost" }, {
       group = lint_augroup,
-      callback = function()
-        lint.try_lint()
-      end,
+      callback = lint_buffer,
     })
 
-    vim.keymap.set("n", "<leader>ml", function()
-      lint.try_lint()
-    end, { desc = "Trigger linting for current file" })
+    vim.keymap.set("n", "<leader>ml", lint_buffer, { desc = "Trigger linting for current file" })
   end,
 }
