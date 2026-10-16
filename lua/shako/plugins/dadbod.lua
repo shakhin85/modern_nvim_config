@@ -205,11 +205,16 @@ return {
 					Count = "SELECT COUNT(*) AS cnt FROM {optional_schema}{table}",
 					Columns = "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{table}' ORDER BY ORDINAL_POSITION",
 					Help = "EXEC sp_help '{optional_schema}{table}'",
+					-- Размер на диске и строки из метаданных: без скана таблицы.
+					-- sys.partitions, а не dm_db_partition_stats: тому нужен VIEW DATABASE STATE.
+					Size = "SELECT (SELECT SUM(p.rows) FROM sys.partitions p WHERE p.object_id = o.id AND p.index_id IN (0, 1)) AS rows_est, SUM(a.total_pages) * 8 / 1024 AS reserved_mb, SUM(a.used_pages) * 8 / 1024 AS used_mb FROM (SELECT OBJECT_ID('[{schema}].[{table}]') AS id) o JOIN sys.partitions p ON p.object_id = o.id JOIN sys.allocation_units a ON a.container_id = p.partition_id GROUP BY o.id",
 				},
 				postgresql = {
 					Count = "SELECT count(*) AS cnt FROM {optional_schema}{table}",
 					Sample = "SELECT * FROM {optional_schema}{table} ORDER BY random() LIMIT 20",
 					Explain = "EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM {optional_schema}{table} LIMIT 200",
+					-- Размер и оценка строк из pg_class: без count(*) по prod-таблице.
+					Size = "SELECT c.reltuples::bigint AS rows_est, pg_size_pretty(pg_total_relation_size(c.oid)) AS total, pg_size_pretty(pg_relation_size(c.oid)) AS heap, pg_size_pretty(pg_indexes_size(c.oid)) AS indexes FROM pg_class c WHERE c.oid = format('%I.%I', '{schema}', '{table}')::regclass",
 				},
 			}
 			-- Подключения — в git-ignored lua/shako/dbs.local.lua (см. dbs.local.lua.example)

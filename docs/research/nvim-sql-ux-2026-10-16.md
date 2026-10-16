@@ -55,7 +55,7 @@
 | B2 | Не выполнять на `:w`, auto_execute helpers | LazyVim extras/lang/sql | уже так (execute_on_save=0, auto_execute=0 намеренно) |
 | B3 | FK-прыжок из dbout `<Plug>(DBUI_JumpToForeignKey)` | dadbod-ui ftplugin/dbout.vim | сделано |
 | B4 | Имя базы в lualine, prod красным | dadbod-ui `db_ui#statusline()` | сделано |
-| B5 | Helper'ы Size/Indexes для PG и MSSQL | dadbod-ui #table-helpers | todo |
+| B5 | Helper'ы Size/Indexes для PG и MSSQL | dadbod-ui #table-helpers | сделано (Size) |
 | B6 | Коннекты dbee из `vim.g.dbs` (MemorySource) | nvim-dbee README | заблокировано: dbee.lua у сессии nvim-06 |
 | B7 | `loaded_sql_completion` — выключить Vim SQL-omni | LazyVim extras/lang/sql | сделано |
 | B8 | `application_name=nvim` в DSN, ширина колонок sqlcmd | libpq docs, dadbod-ui #283 | todo |
