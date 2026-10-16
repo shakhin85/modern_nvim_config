@@ -241,6 +241,9 @@ function M.setup_buffer(bufnr)
 	local map = function(mode, lhs, rhs, desc)
 		vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
 	end
+	-- ftplugin ставит sqlcomplete#Complete, а он выключен (loaded_sql_completion):
+	-- <C-x><C-o> упал бы с E117. Тот же источник, что у blink.
+	vim.bo[bufnr].omnifunc = "vim_dadbod_completion#omni"
 	map({ "x", "o" }, "aq", M.select_statement, "SQL statement")
 	map({ "x", "o" }, "iq", M.select_statement, "SQL statement")
 	map("n", "<leader>Dl", M.run_statement, "Execute statement under cursor")

@@ -165,6 +165,11 @@ return {
 			-- ~/.psqlrc (\timing, unicode borders) исполняется ПОСЛЕ флагов psql -A и ломает
 			-- парсер dadbod-completion (схемы/колонки). Для psql, запущенных из nvim, rc не читаем.
 			vim.env.PSQLRC = "/dev/null"
+			-- Встроенный ftplugin/sql.vim вешает в insert <Left>/<Right> на
+			-- sqlcomplete#Drill* и пачку <C-C>…-маппингов: стрелки перестают двигать
+			-- курсор, <C-C> ждёт timeoutlen. Дополнение у нас — blink + dadbod.
+			vim.g.omni_sql_no_default_maps = 1
+			vim.g.loaded_sql_completion = 1
 			vim.g.db_ui_use_nerd_fonts = 1
 			vim.g.db_ui_save_location = vim.fn.stdpath("data") .. "/db_ui"
 			vim.g.db_ui_execute_on_save = 0 -- :w не выполняет запрос; выполнять <leader>S / <leader>W
