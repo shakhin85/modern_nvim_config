@@ -47,10 +47,11 @@ function M.sync(force)
 	for path, name in pairs(sources) do
 		vim.system({ "vault", "kv", "get", "-format=json", path }, { text = true }, function(o)
 			vim.schedule(function()
-				if o.code ~= 0 then
-					table.insert(errors, path .. ": " .. o.stderr)
+				local ok, decoded = pcall(vim.json.decode, o.stdout)
+				if o.code ~= 0 or not ok then
+					table.insert(errors, path .. ": " .. (o.code ~= 0 and o.stderr or "ответ Vault не JSON"))
 				else
-					local data = vim.json.decode(o.stdout).data.data
+					local data = decoded.data.data
 					if name then
 						passwords[name] = data.password
 					else
@@ -61,10 +62,14 @@ function M.sync(force)
 				if pending > 0 then
 					return
 				end
-				M.write(passwords)
+				-- Хоть один источник не ответил — рабочий pgpass не трогаем: неполный
+				-- файл (истёкший токен) сломал бы коннекты, которые сейчас работают.
 				if #errors > 0 then
-					vim.notify("Vault: часть паролей БД не получена, повтор: :DbVaultRefresh\n" .. table.concat(errors, "\n"), vim.log.levels.WARN)
-				elseif force then
+					vim.notify("Vault: часть паролей БД не получена, PGPASSFILE не изменён, повтор: :DbVaultRefresh\n" .. table.concat(errors, "\n"), vim.log.levels.WARN)
+					return
+				end
+				M.write(passwords)
+				if force then
 					vim.notify("PGPASSFILE обновлён из Vault")
 				end
 			end)

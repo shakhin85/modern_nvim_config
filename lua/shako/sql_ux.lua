@@ -55,7 +55,8 @@ function M.select_statement()
 	local bufnr = vim.api.nvim_get_current_buf()
 	local _, r = statement_lines(bufnr)
 	if not r then
-		return vim.notify("SQL: statement под курсором не найден", vim.log.levels.WARN)
+		vim.notify("SQL: statement под курсором не найден", vim.log.levels.WARN)
+		return false
 	end
 	if vim.fn.mode():match("^[vV\22]") then
 		vim.cmd("normal! \27")
@@ -63,6 +64,7 @@ function M.select_statement()
 	vim.api.nvim_win_set_cursor(0, { r[1] + 1, 0 })
 	vim.cmd("normal! V")
 	vim.api.nvim_win_set_cursor(0, { r[2] + 1, 0 })
+	return true
 end
 
 function M.params(lines)
@@ -136,7 +138,10 @@ function M.run_statement()
 	local bufnr = vim.api.nvim_get_current_buf()
 	if vim.b[bufnr].dbui_db_key_name then
 		-- Буфер DBUI: выполняет сам DBUI (свои bind-параметры, окно результата).
-		M.select_statement()
+		-- Без выделения <Plug> ушёл бы в normal и выполнил весь буфер.
+		if not M.select_statement() then
+			return
+		end
 		return vim.api.nvim_feedkeys(vim.keycode("<Plug>(DBUI_ExecuteQuery)"), "m", false)
 	end
 	local lines = statement_lines(bufnr)
@@ -156,16 +161,19 @@ function M.edit_params()
 	end)
 end
 
--- EXPLAIN statement'а/выделения. ANALYZE исполняет запрос, поэтому только для
--- SELECT/WITH; DML/DDL получает план без выполнения. MSSQL: SHOWPLAN_TEXT —
--- оценочный план, запрос не исполняется.
+-- EXPLAIN statement'а/выделения. ANALYZE исполняет запрос, а по тексту не понять,
+-- безопасен ли он (WITH … DELETE, SELECT fn() с побочкой), поэтому ANALYZE —
+-- только после явного выбора. MSSQL: SHOWPLAN_TEXT — оценочный план без выполнения.
 function M.explain(lines)
 	local bufnr = vim.api.nvim_get_current_buf()
 	local body = vim.trim(table.concat(lines, "\n")):gsub(";%s*$", "")
 	local wrapped
 	if is_pg(bufnr) then
-		local read_only = body:lower():match("^%s*select") or body:lower():match("^%s*with")
-		wrapped = (read_only and "EXPLAIN (ANALYZE, BUFFERS) " or "EXPLAIN ") .. body .. ";"
+		local choice = vim.fn.confirm("EXPLAIN ANALYZE выполнит запрос на " .. (M.db_label() or "b:db") .. ".", "&План без выполнения\n&ANALYZE (выполнить)\n&Отмена", 1)
+		if choice == 0 or choice == 3 then
+			return
+		end
+		wrapped = (choice == 2 and "EXPLAIN (ANALYZE, BUFFERS) " or "EXPLAIN ") .. body .. ";"
 	elseif scheme(bufnr) == "sqlserver" then
 		wrapped = "SET SHOWPLAN_TEXT ON\nGO\n" .. body .. "\nGO\nSET SHOWPLAN_TEXT OFF\nGO"
 	else
