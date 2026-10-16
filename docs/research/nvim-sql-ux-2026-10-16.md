@@ -46,3 +46,16 @@
 - GitHub: dadbod [#33](https://github.com/tpope/vim-dadbod/issues/33), dbee [#217](https://github.com/kndndrj/nvim-dbee/issues/217) [#235](https://github.com/kndndrj/nvim-dbee/issues/235), [postgres-language-server](https://github.com/supabase-community/postgres-language-server), [sqls](https://github.com/sqls-server/sqls), [sqls.nvim](https://github.com/nanotee/sqls.nvim), [csvview.nvim](https://github.com/hat0uma/csvview.nvim), [squawk](https://github.com/sbdchd/squawk), [nvim-lint sqlfluff](https://github.com/mfussenegger/nvim-lint/blob/master/lua/lint/linters/sqlfluff.lua)
 - YouTube: [ALGBuFLzDSA](https://www.youtube.com/watch?v=ALGBuFLzDSA), [MDlYsGbKJyQ](https://www.youtube.com/watch?v=MDlYsGbKJyQ), [NhTPVXP8n7w](https://www.youtube.com/watch?v=NhTPVXP8n7w)
 - Статьи: [Jamie Tanna sqls 2024](https://www.jvt.me/posts/2024/06/07/sql-workflow/), [ssp.sh dadbod](https://www.ssp.sh/brain/query-databases-in-vim-vim-dadbod/)
+
+## Бэклог, волна 2 (herdr-route/grok, 2026-10-16)
+
+| # | Что | Источник | Статус |
+|---|-----|----------|--------|
+| B1 | `g:db_ui_hide_schemas` — без pg_catalog/information_schema/sys | dadbod-ui doc `g:db_ui_hide_schemas` | todo |
+| B2 | Не выполнять на `:w`, auto_execute helpers | LazyVim extras/lang/sql | уже так (execute_on_save=0, auto_execute=0 намеренно) |
+| B3 | FK-прыжок из dbout `<Plug>(DBUI_JumpToForeignKey)` | dadbod-ui ftplugin/dbout.vim | todo |
+| B4 | Имя базы в lualine, prod красным | dadbod-ui `db_ui#statusline()` | сделано |
+| B5 | Helper'ы Size/Indexes для PG и MSSQL | dadbod-ui #table-helpers | todo |
+| B6 | Коннекты dbee из `vim.g.dbs` (MemorySource) | nvim-dbee README | заблокировано: dbee.lua у сессии nvim-06 |
+| B7 | `loaded_sql_completion` — выключить Vim SQL-omni | LazyVim extras/lang/sql | todo |
+| B8 | `application_name=nvim` в DSN, ширина колонок sqlcmd | libpq docs, dadbod-ui #283 | todo |

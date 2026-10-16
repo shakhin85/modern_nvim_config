@@ -207,6 +207,36 @@ function M.saved_query_db(bufnr)
 	return key and vim.g.dbs and vim.g.dbs[key] and key or nil
 end
 
+-- Базы, где ошибочный запрос бьёт по живым данным: имя в statusline красное.
+local PROD = { lime_prod = true, jade_mssql = true }
+
+-- Имя базы буфера для statusline: ключ DBUI, ключ vim.g.dbs по URL или
+-- db@host из URL (без логина и пароля). nil — буфер не SQL или базы нет.
+function M.db_label()
+	if not vim.tbl_contains({ "sql", "mysql", "plsql" }, vim.bo.filetype) then
+		return nil
+	end
+	local key = vim.b.dbui_db_key_name
+	local url = vim.b.db
+	if not key and url then
+		for k, v in pairs(vim.g.dbs or {}) do
+			if v == url then
+				key = k
+				break
+			end
+		end
+	end
+	if key then
+		return key, PROD[key] or false
+	end
+	if type(url) ~= "string" then
+		return nil
+	end
+	local host = url:match("^%w+://[^@/]*@([^/:?;]+)") or url:match("^%w+://([^/:?;]+)")
+	local db = url:match("^%w+://[^/]*/([^?;/]+)") or url:match("[;?&]database=([^;&]+)")
+	return host and (db and db .. "@" .. host or host) or url:match("^(%w+):"), false
+end
+
 function M.setup_buffer(bufnr)
 	local map = function(mode, lhs, rhs, desc)
 		vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
