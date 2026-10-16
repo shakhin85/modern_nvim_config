@@ -51,7 +51,7 @@
 
 | # | Что | Источник | Статус |
 |---|-----|----------|--------|
-| B1 | `g:db_ui_hide_schemas` — без pg_catalog/information_schema/sys | dadbod-ui doc `g:db_ui_hide_schemas` | todo |
+| B1 | `g:db_ui_hide_schemas` — без pg_catalog/information_schema/sys | dadbod-ui doc `g:db_ui_hide_schemas` | сделано |
 | B2 | Не выполнять на `:w`, auto_execute helpers | LazyVim extras/lang/sql | уже так (execute_on_save=0, auto_execute=0 намеренно) |
 | B3 | FK-прыжок из dbout `<Plug>(DBUI_JumpToForeignKey)` | dadbod-ui ftplugin/dbout.vim | todo |
 | B4 | Имя базы в lualine, prod красным | dadbod-ui `db_ui#statusline()` | сделано |

@@ -175,6 +175,18 @@ return {
 			vim.g.db_ui_win_position = "left"
 			vim.g.db_ui_winwidth = 35
 			vim.g.db_ui_use_nvim_notify = 1
+			-- Служебные схемы PG и MSSQL в дереве — шум. DBUI сверяет через match(),
+			-- то есть по подстроке: без ^…$ 'sys' спрятал бы и 'analysis'.
+			vim.g.db_ui_hide_schemas = {
+				"^pg_catalog$",
+				"^pg_toast",
+				"^pg_temp_",
+				"^information_schema$",
+				"^INFORMATION_SCHEMA$",
+				"^sys$",
+				"^guest$",
+				"^db_\\(owner\\|accessadmin\\|securityadmin\\|ddladmin\\|backupoperator\\|datareader\\|datawriter\\|denydatareader\\|denydatawriter\\)$",
+			}
 			require("shako.sql_ux").setup_timing()
 			vim.g.db_ui_table_helpers = {
 				sqlserver = {
