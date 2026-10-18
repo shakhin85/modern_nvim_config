@@ -43,6 +43,7 @@ return {
         "yamlls",
         "dockerls",
         "docker_compose_language_service",
+        "postgres_lsp",
         "helm_ls",
         "rust_analyzer",
         "gopls",

@@ -123,6 +123,7 @@ return {
       "helm_ls",
       "gopls",
       "taplo",
+      "postgres_lsp",
     }
 
     -- ruff (поднимает mason-lspconfig) по умолчанию берёт utf-8, basedpyright — utf-16:
@@ -222,6 +223,11 @@ return {
             },
           },
         }
+      end
+
+      -- Корень — проектный jsonc или каталог базы из b:db, см. shako.pgls.
+      if server == "postgres_lsp" then
+        opts.root_dir = require("shako.pgls").root_dir
       end
 
       -- The new Neovim 0.11+ API way:
