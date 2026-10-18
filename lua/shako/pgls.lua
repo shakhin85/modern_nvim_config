@@ -16,18 +16,23 @@ function M.dir_for(url)
 	if not p then
 		return nil
 	end
-	local dir = ("%s/%s@%s_%s_%s"):format(state, p.user, p.host, p.port, p.db)
-	local text = vim.json.encode({
+	local name = ("%s@%s_%s_%s"):format(p.user, p.host, p.port, p.db):gsub("[^%w@._-]", "_")
+	local dir = state .. "/" .. name
+	local cfg = {
 		linter = { enabled = false },
 		splinter = { enabled = false },
 		plpgsqlCheck = { enabled = false },
 		typecheck = { enabled = true },
 		db = { host = p.host, port = tonumber(p.port), username = p.user, database = p.db, connTimeoutSecs = 10 },
-	})
+	}
+	-- Сравниваем таблицы, не текст: порядок ключей vim.json.encode от запуска к запуску разный.
 	local file = dir .. "/" .. marker
-	if vim.uv.fs_stat(file) == nil or table.concat(vim.fn.readfile(file), "\n") ~= text then
+	local ok, old = pcall(function()
+		return vim.json.decode(table.concat(vim.fn.readfile(file), "\n"))
+	end)
+	if not (ok and vim.deep_equal(old, cfg)) then
 		vim.fn.mkdir(dir, "p")
-		vim.fn.writefile({ text }, file)
+		vim.fn.writefile({ vim.json.encode(cfg) }, file)
 	end
 	return dir
 end
@@ -47,12 +52,23 @@ function M.attach(buf)
 	if not cfg or vim.fn.executable(cfg.cmd[1]) == 0 then
 		return
 	end
-	for _, client in ipairs(vim.lsp.get_clients({ bufnr = buf, name = "postgres_lsp" })) do
-		vim.lsp.buf_detach_client(buf, client.id)
-	end
+	local old = vim.lsp.get_clients({ bufnr = buf, name = "postgres_lsp" })
+	local new_id
 	M.root_dir(buf, function(dir)
-		vim.lsp.start(vim.tbl_extend("force", cfg, { root_dir = dir }), { bufnr = buf })
+		new_id = vim.lsp.start(vim.tbl_extend("force", cfg, { root_dir = dir }), { bufnr = buf })
 	end)
+	-- Старого гасим после старта нового: stop асинхронный и при выходе клиента
+	-- отцепляет буфер, это задевает клиента, стартовавшего следом.
+	for _, client in ipairs(old) do
+		if client.id ~= new_id then
+			-- Клиент без буферов держит пул коннектов к старой базе до выхода из nvim.
+			if vim.deep_equal(vim.tbl_keys(client.attached_buffers), { buf }) then
+				client:stop()
+			else
+				vim.lsp.buf_detach_client(buf, client.id)
+			end
+		end
+	end
 end
 
 return M
