@@ -9,6 +9,7 @@ local function attach_db(bufnr, url, refetch)
 	if not refetch then
 		return
 	end
+	require("shako.pgls").attach(bufnr)
 	-- Через schedule: на FileType-событии lazy может ещё не успеть подгрузить
 	-- vim-dadbod-completion (он ft-ленивый), и функции просто нет в этот тик.
 	vim.schedule(function()
