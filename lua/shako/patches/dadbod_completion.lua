@@ -5,11 +5,13 @@
 -- 8 матвью из 8 невидимы, при том что таблиц там 7. Точки расширения у плагина
 -- нет: запросы объявлены скриптовыми переменными s:, снаружи их не подменить.
 --
--- Поэтому правим сам файл, но только словарь s:postgres — общие s:query и
+-- Поэтому патчим копию файла, но только словарь s:postgres — общие s:query и
 -- s:table_column_query трогать нельзя, на них сидят MySQL и MSSQL.
--- Патч накладывается build-хуком lazy после каждого обновления плагина и падает
--- с ошибкой, если апстрим изменил строку: молчащее автодополнение хуже сборки,
--- которая громко упала.
+-- Копия лежит вне каталога плагина: правка на месте делает его git-дерево
+-- грязным, и lazy отказывается обновлять плагин. Каталог копии стоит в
+-- runtimepath раньше плагина, поэтому autoload находит её первой.
+-- Копия пересобирается, когда оригинал новее, и сборка падает с ошибкой, если
+-- апстрим изменил строку: молчащее автодополнение хуже сборки, которая громко упала.
 local M = {}
 
 local MARKER = '" shako: matview-aware queries'
@@ -68,28 +70,19 @@ local function postgres_block(src)
 	return from, to
 end
 
-local function schemas_path(dir)
-	return dir .. "/autoload/vim_dadbod_completion/schemas.vim"
-end
+local REL = "/autoload/vim_dadbod_completion/schemas.vim"
 
+-- Каталог для runtimepath: в нём лежит пропатченный autoload-файл.
+M.root = vim.fn.stdpath("data") .. "/shako-patches/dadbod-completion"
+
+-- Собрать пропатченную копию из закоммиченного оригинала плагина:
+-- HEAD не зависит от рабочего дерева, даже если там остались чужие правки.
 function M.apply(dir)
-	local path = schemas_path(dir)
-	local fd = io.open(path, "r")
-	if not fd then
-		error("patch: не нашёл " .. path)
+	local res = vim.system({ "git", "-C", dir, "show", "HEAD:" .. REL:sub(2) }, { text = true }):wait()
+	if res.code ~= 0 then
+		error("patch: git show не отдал " .. REL .. ": " .. res.stderr)
 	end
-	local src = fd:read("*a")
-	fd:close()
-
-	if src:find(MARKER, 1, true) then
-		return "патч уже наложен"
-	end
-
-	-- Оригинал рядом: откат — одна команда cp, без переустановки плагина.
-	local backup = path .. ".orig"
-	if not vim.uv.fs_stat(backup) then
-		vim.fn.writefile(vim.split(src, "\n"), backup)
-	end
+	local src = res.stdout
 
 	local bfrom, bto = postgres_block(src)
 	local head, block, tail = src:sub(1, bfrom - 1), src:sub(bfrom, bto), src:sub(bto + 1)
@@ -103,21 +96,23 @@ function M.apply(dir)
 		block = block:gsub(vim.pesc(from), (to:gsub("%%", "%%%%")), 1)
 	end
 
-	src = head .. definitions() .. block .. tail
-
-	vim.fn.writefile(vim.split(src, "\n"), path)
-	return "патч наложен: " .. path
+	local out = M.root .. REL
+	vim.fn.mkdir(vim.fs.dirname(out), "p")
+	vim.fn.writefile(vim.split(head .. definitions() .. block .. tail, "\n"), out)
+	return "патч собран: " .. out
 end
 
--- Вернуть плагин в исходное состояние.
-function M.revert(dir)
-	local path = schemas_path(dir)
-	local backup = path .. ".orig"
-	if not vim.uv.fs_stat(backup) then
-		return "нечего откатывать: " .. backup .. " не найден"
+-- Пересобрать копию, если оригинал новее, и поставить её в runtimepath первой.
+function M.setup(dir)
+	local orig = vim.uv.fs_stat(dir .. REL)
+	if not orig then
+		return -- плагин ещё не установлен
 	end
-	vim.fn.writefile(vim.fn.readfile(backup), path)
-	return "откачено из " .. backup
+	local copy = vim.uv.fs_stat(M.root .. REL)
+	if not copy or copy.mtime.sec < orig.mtime.sec then
+		M.apply(dir)
+	end
+	vim.opt.rtp:prepend(M.root)
 end
 
 return M

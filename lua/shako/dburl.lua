@@ -60,9 +60,11 @@ end
 
 -- Строки запроса: выделение в visual-режиме, иначе весь буфер.
 function M.buffer_lines()
-	if vim.fn.mode():match("[vV]") then
-		vim.cmd([[normal! <Esc>]])
-		return vim.api.nvim_buf_get_lines(0, vim.fn.line("'<") - 1, vim.fn.line("'>"), false)
+	if vim.fn.mode():match("[vV\22]") then
+		-- Границы живого выделения: метки '< '> ставятся только после выхода из visual.
+		local a, b = vim.fn.line("v"), vim.fn.line(".")
+		vim.api.nvim_feedkeys(vim.keycode("<Esc>"), "n", false)
+		return vim.api.nvim_buf_get_lines(0, math.min(a, b) - 1, math.max(a, b), false)
 	end
 	return vim.api.nvim_buf_get_lines(0, 0, -1, false)
 end
@@ -71,6 +73,16 @@ end
 function M.buffer_query()
 	local query = vim.trim(table.concat(M.buffer_lines(), "\n")):gsub(";%s*$", "")
 	return query ~= "" and query or nil
+end
+
+-- Диалект sqlfluff по базе буфера (b:db), без неё — по filetype. Общий для
+-- линтера и formatter: иначе валидный T-SQL разбирается как postgres.
+local sqlfluff_dialect_by_scheme = { postgres = "postgres", postgresql = "postgres", sqlserver = "tsql", sqlite = "sqlite" }
+local sqlfluff_dialect_by_ft = { mysql = "mysql", plsql = "oracle" }
+
+function M.sqlfluff_dialect(buf)
+	local scheme = (vim.b[buf].db or ""):match("^(%a[%w+.-]*):")
+	return sqlfluff_dialect_by_scheme[scheme] or sqlfluff_dialect_by_ft[vim.bo[buf].filetype] or "postgres"
 end
 
 return M

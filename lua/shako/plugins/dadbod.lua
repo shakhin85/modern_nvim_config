@@ -137,11 +137,16 @@ return {
 			"kristijanhusak/vim-dadbod-completion",
 		},
 		cmd = { "DBUI", "DBUIToggle", "DBUIAddConnection", "DBUIFindBuffer" },
+		-- Окно результата :DB из обычного .sql: ftplugin/dbout.vim лежит в DBUI,
+		-- без загрузки нет <C-]> (прыжок по FK), vic, yh, <leader>R.
+		ft = "dbout",
 		keys = {
 			{ "<leader>Du", "<cmd>DBUIToggle<CR>", desc = "Toggle DB UI" },
 			{ "<leader>Da", "<cmd>DBUIAddConnection<CR>", desc = "Add DB connection" },
 			{ "<leader>Df", "<cmd>DBUIFindBuffer<CR>", desc = "Find DB buffer" },
 			{ "<leader>Dc", export_csv, mode = { "n", "x" }, desc = "Export query result to CSV" },
+			{ "<leader>Do", function() require("shako.sql_ux").saved_queries() end, desc = "Saved queries (picker)" },
+			{ "<leader>DO", function() require("shako.sql_ux").grep_saved_queries() end, desc = "Grep saved queries" },
 			{ "<leader>Dv", inspect_result, mode = { "n", "x" }, desc = "Inspect result in visidata/csvlens" },
 			{
 				"<leader>Ds",
@@ -163,6 +168,17 @@ return {
 			-- ~/.psqlrc (\timing, unicode borders) исполняется ПОСЛЕ флагов psql -A и ломает
 			-- парсер dadbod-completion (схемы/колонки). Для psql, запущенных из nvim, rc не читаем.
 			vim.env.PSQLRC = "/dev/null"
+			-- Сессии из nvim видны в pg_stat_activity как nvim, а не psql: их легко найти
+			-- и прибить. libpq берёт PGAPPNAME, URL в dbs.local.lua не трогаем.
+			vim.env.PGAPPNAME = "nvim"
+			-- Встроенный ftplugin/sql.vim вешает в insert <Left>/<Right> на
+			-- sqlcomplete#Drill* и пачку <C-C>…-маппингов: стрелки перестают двигать
+			-- курсор, <C-C> ждёт timeoutlen. Дополнение у нас — blink + dadbod.
+			-- filetype=dbout ставит autocmd из plugin/db_ui.vim, то есть только после
+			-- загрузки DBUI; без этого ft-триггер выше никогда не сработает.
+			vim.filetype.add({ extension = { dbout = "dbout" } })
+			vim.g.omni_sql_no_default_maps = 1
+			vim.g.loaded_sql_completion = 1
 			vim.g.db_ui_use_nerd_fonts = 1
 			vim.g.db_ui_save_location = vim.fn.stdpath("data") .. "/db_ui"
 			vim.g.db_ui_execute_on_save = 0 -- :w не выполняет запрос; выполнять <leader>S / <leader>W
@@ -173,16 +189,35 @@ return {
 			vim.g.db_ui_win_position = "left"
 			vim.g.db_ui_winwidth = 35
 			vim.g.db_ui_use_nvim_notify = 1
+			-- Служебные схемы PG и MSSQL в дереве — шум. DBUI сверяет через match(),
+			-- то есть по подстроке: без ^…$ 'sys' спрятал бы и 'analysis'.
+			vim.g.db_ui_hide_schemas = {
+				"^pg_catalog$",
+				"^pg_toast",
+				"^pg_temp_",
+				"^information_schema$",
+				"^INFORMATION_SCHEMA$",
+				"^sys$",
+				"^guest$",
+				"^db_\\(owner\\|accessadmin\\|securityadmin\\|ddladmin\\|backupoperator\\|datareader\\|datawriter\\|denydatareader\\|denydatawriter\\)$",
+			}
+			require("shako.sql_ux").setup_timing()
 			vim.g.db_ui_table_helpers = {
 				sqlserver = {
 					List = "SELECT TOP 200 * FROM {optional_schema}{table}",
 					Count = "SELECT COUNT(*) AS cnt FROM {optional_schema}{table}",
 					Columns = "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{table}' ORDER BY ORDINAL_POSITION",
 					Help = "EXEC sp_help '{optional_schema}{table}'",
+					-- Размер на диске и строки из метаданных: без скана таблицы.
+					-- sys.partitions, а не dm_db_partition_stats: тому нужен VIEW DATABASE STATE.
+					Size = "SELECT (SELECT SUM(p.rows) FROM sys.partitions p WHERE p.object_id = o.id AND p.index_id IN (0, 1)) AS rows_est, SUM(a.total_pages) * 8 / 1024 AS reserved_mb, SUM(a.used_pages) * 8 / 1024 AS used_mb FROM (SELECT OBJECT_ID('[{schema}].[{table}]') AS id) o JOIN sys.partitions p ON p.object_id = o.id JOIN sys.allocation_units a ON a.container_id = p.partition_id GROUP BY o.id",
 				},
 				postgresql = {
 					Count = "SELECT count(*) AS cnt FROM {optional_schema}{table}",
 					Sample = "SELECT * FROM {optional_schema}{table} ORDER BY random() LIMIT 20",
+					Explain = "EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM {optional_schema}{table} LIMIT 200",
+					-- Размер и оценка строк из pg_class: без count(*) по prod-таблице.
+					Size = "SELECT c.reltuples::bigint AS rows_est, pg_size_pretty(pg_total_relation_size(c.oid)) AS total, pg_size_pretty(pg_relation_size(c.oid)) AS heap, pg_size_pretty(pg_indexes_size(c.oid)) AS indexes FROM pg_class c WHERE c.oid = format('%I.%I', '{schema}', '{table}')::regclass",
 				},
 			}
 			-- Подключения — в git-ignored lua/shako/dbs.local.lua (см. dbs.local.lua.example)
@@ -232,21 +267,21 @@ return {
 						end
 						return
 					end
-					if not vim.b[ev.buf].db and vim.g.dbs and vim.g.db_default then
-						attach_db(ev.buf, vim.g.dbs[vim.g.db_default])
+					-- Сохранённый запрос DBUI (<save_location>/<база>/файл) — к своей базе.
+					local sql_ux = require("shako.sql_ux")
+					local saved = sql_ux.saved_query_db(ev.buf)
+					if not vim.b[ev.buf].db and vim.g.dbs and (saved or vim.g.db_default) then
+						attach_db(ev.buf, vim.g.dbs[saved or vim.g.db_default])
 					end
 					-- <leader>S из dadbod-ui живёт только внутри его буферов; в обычном
-					-- .sql-файле выполнять запрос нечем, заводим сами: весь буфер в
-					-- normal, выделение — в visual (та же логика, что у <leader>Dc/Dv).
-					-- Через schedule и с проверкой b:dbui_db_key_name: у буферов самого
-					-- DBUI тоже filetype=sql, и перебивать их выполнение нельзя — оно
-					-- умеет bind-параметры и роутинг результата в окно DBUI.
+					-- .sql-файле выполнять запрос нечем, заводим сами (shako.sql_ux):
+					-- буфер, выделение, statement под курсором, bind-параметры.
+					-- Через schedule: b:dbui_db_key_name у буферов DBUI появляется после
+					-- FileType, а их <leader>S/<leader>E перебивать нельзя.
 					vim.schedule(function()
-						if not vim.api.nvim_buf_is_valid(ev.buf) or vim.b[ev.buf].dbui_db_key_name then
-							return
+						if vim.api.nvim_buf_is_valid(ev.buf) then
+							sql_ux.setup_buffer(ev.buf)
 						end
-						vim.keymap.set("n", "<leader>S", "<Cmd>%DB<CR>", { buffer = ev.buf, desc = "Execute buffer against b:db" })
-						vim.keymap.set("x", "<leader>S", "db#op_exec()", { buffer = ev.buf, expr = true, desc = "Execute selection against b:db" })
 					end)
 				end,
 			})
@@ -257,8 +292,11 @@ return {
 		dependencies = { "tpope/vim-dadbod" },
 		ft = { "sql", "mysql", "plsql", "sqlite" },
 		-- Апстрим берёт схему из INFORMATION_SCHEMA.COLUMNS, где нет матвью
-		-- PostgreSQL. Патч переносит запросы на pg_class; подробности и откат —
+		-- PostgreSQL. Патч переносит запросы на pg_class; подробности —
 		-- в shako.patches.dadbod_completion.
+		init = function(plugin)
+			require("shako.patches.dadbod_completion").setup(plugin.dir)
+		end,
 		build = function(plugin)
 			print(require("shako.patches.dadbod_completion").apply(plugin.dir))
 		end,
