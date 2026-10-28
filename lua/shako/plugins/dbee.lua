@@ -56,7 +56,34 @@ local function connections()
 	return out
 end
 
+-- Режет текст по `;` верхнего уровня из treesitter-дерева: `;` в строке или
+-- комментарии не делит. Дерево с ERROR не страшно — непойманная `;` лишь
+-- оставляет запросы одним куском. Кусок начинается с запроса, не с комментария
+-- над ним: так запись в call log читается по select.
+local function split_statements(query)
+	local root = vim.treesitter.get_string_parser(query, "sql"):parse()[1]:root()
+	local out, first = {}, nil
+	for node in root:iter_children() do
+		local kind = node:type()
+		local _, _, pos = node:start()
+		if kind == ";" then
+			if first then
+				table.insert(out, query:sub(first + 1, pos))
+			end
+			first = nil
+		elseif kind ~= "comment" and kind ~= "marginalia" then
+			first = first or pos
+		end
+	end
+	if first then
+		table.insert(out, vim.trim(query:sub(first + 1)))
+	end
+	return out
+end
+
 -- Готовый .sql-файл (или выделение) — в dbee: результат таблицей в Results.
+-- Каждый запрос — свой вызов в call log: в одном вызове Go-бэкенд склеивает
+-- наборы строк под заголовком первого запроса.
 -- Коннект dbee переключаем на базу буфера (b:db), иначе запрос уйдёт туда,
 -- что выбрано в drawer.
 local function execute_buffer()
@@ -75,7 +102,9 @@ local function execute_buffer()
 			end
 		end
 	end
-	require("dbee").execute(query)
+	for _, statement in ipairs(split_statements(query)) do
+		require("dbee").execute(statement)
+	end
 end
 
 return {
