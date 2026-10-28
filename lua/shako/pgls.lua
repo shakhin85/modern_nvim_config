@@ -8,6 +8,11 @@ local M = {}
 local marker = "postgres-language-server.jsonc"
 local state = vim.fn.stdpath("state") .. "/pgls"
 
+-- Сервер держит свой пул коннектов на базу. Под рабочей учёткой он занимал слоты
+-- bitrix_user и dwh_1c, нужные ETL (SHA-413). Для этих баз ходим ролью nvim_ro:
+-- CONNECTION LIMIT 5 и read-only держит PostgreSQL. Пароль — shako.vault_pgpass.
+M.ro = { user = "nvim_ro", dbs = { bitrix24 = true, dwh_1c = true } }
+
 -- Каталог-корень для базы из URL; jsonc пишем, только если содержимое поменялось.
 -- linter и splinter выключены: миграции уже линтит squawk (nvim-lint), а splinter
 -- шлёт в базу свои проверки supabase. plpgsqlCheck требует расширение в базе.
@@ -16,14 +21,15 @@ function M.dir_for(url)
 	if not p then
 		return nil
 	end
-	local name = ("%s@%s_%s_%s"):format(p.user, p.host, p.port, p.db):gsub("[^%w@._-]", "_")
+	local user = M.ro.dbs[p.db] and M.ro.user or p.user
+	local name = ("%s@%s_%s_%s"):format(user, p.host, p.port, p.db):gsub("[^%w@._-]", "_")
 	local dir = state .. "/" .. name
 	local cfg = {
 		linter = { enabled = false },
 		splinter = { enabled = false },
 		plpgsqlCheck = { enabled = false },
 		typecheck = { enabled = true },
-		db = { host = p.host, port = tonumber(p.port), username = p.user, database = p.db, connTimeoutSecs = 10 },
+		db = { host = p.host, port = tonumber(p.port), username = user, database = p.db, connTimeoutSecs = 10 },
 	}
 	-- Сравниваем таблицы, не текст: порядок ключей vim.json.encode от запуска к запуску разный.
 	local file = dir .. "/" .. marker
