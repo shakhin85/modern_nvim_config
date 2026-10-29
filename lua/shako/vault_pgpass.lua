@@ -9,6 +9,8 @@ M.path = "secret/products/data-and-analytics/nvim-dbs"
 -- чтобы ротация пароля не оставляла протухшую копию.
 M.own = {
 	dwh_1c_dev = "secret/products/data-and-analytics/dev/dwh_1c",
+	-- Не коннект из vim.g.dbs, а роль postgres_lsp: строки пишет M.write по shako.pgls.ro.
+	nvim_ro = "secret/products/data-and-analytics/nvim_ro",
 }
 -- tmpfs: файл исчезает при перезагрузке и не попадает в бэкапы домашнего каталога.
 M.file = ("/run/user/%d/nvim-pgpass"):format(vim.uv.getuid())
@@ -25,6 +27,12 @@ function M.write(passwords)
 		local parts = dburl.pg_parts(url)
 		if parts and passwords[name] then
 			table.insert(lines, table.concat({ parts.host, parts.port, parts.db, escape(parts.user), escape(passwords[name]) }, ":"))
+		end
+	end
+	local ro = require("shako.pgls").ro
+	if passwords[ro.user] then
+		for db in pairs(ro.dbs) do
+			table.insert(lines, table.concat({ "*", "*", db, ro.user, escape(passwords[ro.user]) }, ":"))
 		end
 	end
 	table.sort(lines)
