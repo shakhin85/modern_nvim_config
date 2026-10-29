@@ -1,6 +1,6 @@
 # Буфер обмена Windows с двумя форматами: Text (TSV для Excel) + HTML (таблица с рамками для Word/Outlook).
 # OSC 52 и lemonade переносят только текст, поэтому nvim шлёт сюда "text\0html" через `ssh -W 127.0.0.1:2490 winhost`.
-# Живёт в интерактивной сессии пользователя (задача nvim-clip-html, at logon): из сессии sshd буфер рабочего стола не виден.
+# Живёт в интерактивной сессии пользователя (задача nvim-clip-html, at logon; регистрация — register-clip-html.ps1): из сессии sshd буфер рабочего стола не виден.
 # Ответ клиенту: "ok" после записи буфера, иначе "err: <причина>".
 Add-Type -AssemblyName System.Windows.Forms
 
