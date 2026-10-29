@@ -7,8 +7,9 @@ $src = Join-Path $PSScriptRoot 'clip-html.ps1'
 if ($src -ne $script) { Copy-Item $src $script -Force }
 
 $user = "$env:USERDOMAIN\$env:USERNAME"
-$action = New-ScheduledTaskAction -Execute 'powershell.exe' `
-	-Argument "-NoProfile -Sta -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script`""
+# conhost --headless: при консоли по умолчанию = Windows Terminal флаг -WindowStyle Hidden не прячет окно.
+$action = New-ScheduledTaskAction -Execute 'conhost.exe' `
+	-Argument "--headless powershell.exe -NoProfile -Sta -ExecutionPolicy Bypass -File `"$script`""
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $user
 $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Limited
 # На батарее планировщик по умолчанию гасит задачу (событие 327) — ноутбук теряет помощника.
