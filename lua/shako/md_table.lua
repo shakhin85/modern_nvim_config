@@ -34,6 +34,18 @@ local function cells(line, sep)
 	return out
 end
 
+-- "12 450" / "5 120,5" → без пробелов-разрядов, иначе Excel берёт ячейку как текст.
+-- Только строгие группы по 3 цифры: телефон "8 800 555 35 35" не трогаем.
+local GROUPED = vim.regex([[\v^-?\d{1,3}([  ]\d{3})+([,.]\d+)?$]])
+local function number(cell)
+	return GROUPED:match_str(cell) and cell:gsub("[  ]", "") or cell
+end
+
+-- Ячейка box-таблицы, перенесённая на следующую строку рамки: первая колонка пустая.
+local function continues(row, prev)
+	return prev and row[1] == "" and #row == #prev
+end
+
 function M.yank()
 	local lnum = vim.fn.line(".")
 	if not kind(vim.fn.getline(lnum)) then
@@ -48,18 +60,37 @@ function M.yank()
 		last = last + 1
 	end
 
-	local rows = {}
+	-- prev сбрасывается на линии рамки: строка после ├──┤ — новая запись, не перенос.
+	local rows, prev = {}, nil
 	for _, line in ipairs(vim.fn.getline(first, last)) do
 		local k = kind(line)
-		if k ~= "rule" then
-			table.insert(rows, table.concat(cells(line, k), "\t"))
+		if k == "rule" then
+			prev = nil
+		else
+			local row = cells(line, k)
+			if k == "│" and continues(row, prev) then
+				for i, cell in ipairs(row) do
+					if cell ~= "" then
+						prev[i] = prev[i] == "" and cell or prev[i] .. " " .. cell
+					end
+				end
+			else
+				table.insert(rows, row)
+				prev = row
+			end
 		end
 	end
 	if #rows == 0 then
 		vim.notify("В таблице нет строк данных", vim.log.levels.WARN)
 		return
 	end
-	vim.fn.setreg("+", rows, "l")
+	vim.fn.setreg(
+		"+",
+		vim.tbl_map(function(row)
+			return table.concat(vim.tbl_map(number, row), "\t")
+		end, rows),
+		"l"
+	)
 	vim.notify(("Таблица в буфере: %d строк (TSV)"):format(#rows))
 end
 
