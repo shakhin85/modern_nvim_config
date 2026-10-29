@@ -59,7 +59,8 @@ end
 -- Режет текст по `;` верхнего уровня из treesitter-дерева: `;` в строке или
 -- комментарии не делит. Дерево с ERROR не страшно — непойманная `;` лишь
 -- оставляет запросы одним куском. Кусок начинается с запроса, не с комментария
--- над ним: так запись в call log читается по select.
+-- над ним: так запись в call log читается по select. stop — смещение его `;`
+-- (или конца текста): по нему <leader>De находит запрос под курсором.
 local function split_statements(query)
 	local root = vim.treesitter.get_string_parser(query, "sql"):parse()[1]:root()
 	local out, first = {}, nil
@@ -68,7 +69,7 @@ local function split_statements(query)
 		local _, _, pos = node:start()
 		if kind == ";" then
 			if first then
-				table.insert(out, query:sub(first + 1, pos))
+				table.insert(out, { text = query:sub(first + 1, pos), stop = pos })
 			end
 			first = nil
 		elseif kind ~= "comment" and kind ~= "marginalia" then
@@ -76,35 +77,79 @@ local function split_statements(query)
 		end
 	end
 	if first then
-		table.insert(out, vim.trim(query:sub(first + 1)))
+		table.insert(out, { text = vim.trim(query:sub(first + 1)), stop = #query })
 	end
 	return out
+end
+
+-- Коннект буфера: строка `-- db: <имя>` в начале файла (заметки dbee не знают
+-- b:db), иначе имя из vim.g.dbs по b:db. Ни того ни другого — остаётся
+-- коннект из drawer.
+local function buffer_connection()
+	local header = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] or ""
+	return header:match("^%-%-%s*db:%s*(%S+)")
+		or vim.iter(vim.g.dbs or {}):find(function(_, url)
+			return url == vim.b.db
+		end)
+end
+
+-- false — коннект назван, но его нет в dbee: запрос не уходит в чужую базу.
+local function use_buffer_connection()
+	local name = buffer_connection()
+	if not name then
+		return true
+	end
+	local core = require("dbee.api").core
+	for _, source in ipairs(core.get_sources()) do
+		for _, conn in ipairs(core.source_get_connections(source:name())) do
+			if conn.name == name then
+				core.set_current_connection(conn.id)
+				return true
+			end
+		end
+	end
+	vim.notify("Dbee: нет коннекта " .. name, vim.log.levels.ERROR)
+	return false
 end
 
 -- Готовый .sql-файл (или выделение) — в dbee: результат таблицей в Results.
 -- Каждый запрос — свой вызов в call log: в одном вызове Go-бэкенд склеивает
 -- наборы строк под заголовком первого запроса.
--- Коннект dbee переключаем на базу буфера (b:db), иначе запрос уйдёт туда,
--- что выбрано в drawer.
 local function execute_buffer()
 	local query = require("shako.dburl").buffer_query()
-	if not query then
+	if not query or not use_buffer_connection() then
 		return
 	end
-	local core = require("dbee.api").core
-	local name = vim.iter(vim.g.dbs or {}):find(function(_, url)
-		return url == vim.b.db
-	end)
-	for _, source in ipairs(core.get_sources()) do
-		for _, conn in ipairs(core.source_get_connections(source:name())) do
-			if conn.name == name then
-				core.set_current_connection(conn.id)
-			end
-		end
-	end
 	for _, statement in ipairs(split_statements(query)) do
-		require("dbee").execute(statement)
+		require("dbee").execute(statement.text)
 	end
+end
+
+-- Один запрос — тот, в чьих границах (до его `;` включительно) стоит курсор.
+local function execute_statement()
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+	local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+	local cursor = col
+	for i = 1, row - 1 do
+		cursor = cursor + #lines[i] + 1
+	end
+	local statement = vim.iter(split_statements(table.concat(lines, "\n"))):find(function(s)
+		return s.stop >= cursor
+	end)
+	if statement and use_buffer_connection() then
+		require("dbee").execute(statement.text)
+	end
+end
+
+-- Call log Go-бэкенд держит в памяти и пишет в /tmp/dbee-calllog.json на своём
+-- выходе, уже после VimLeavePost; очистки в API нет. Поэтому <leader>DC только
+-- ставит маркер, а файлы удаляет следующий старт nvim до restoreCallLog.
+local clear_marker = vim.fn.stdpath("state") .. "/dbee/clear-calllog"
+
+local function mark_call_log_clear()
+	vim.fn.mkdir(vim.fs.dirname(clear_marker), "p")
+	vim.fn.writefile({}, clear_marker)
+	vim.notify("Dbee: call log очистится при следующем запуске nvim")
 end
 
 return {
@@ -112,12 +157,21 @@ return {
 	-- Плагин вешает автокоманду на BufModifiedSet, которого в Neovim 0.13-dev нет;
 	-- имя события подменяет шим в init.lua. Апстрим стоит с 2025-07-25 (dda5176).
 	dependencies = { "MunifTanjim/nui.nvim" },
+	init = function()
+		if vim.uv.fs_stat(clear_marker) then
+			vim.fn.delete("/tmp/dbee-calllog.json")
+			vim.fn.delete("/tmp/dbee-history", "rf")
+			vim.fn.delete(clear_marker)
+		end
+	end,
 	build = function()
 		require("dbee").install()
 	end,
 	keys = {
 		{ "<leader>Db", function() require("dbee").toggle() end, desc = "Dbee: toggle UI" },
 		{ "<leader>DE", execute_buffer, ft = { "sql", "mysql", "plsql" }, mode = { "n", "x" }, desc = "Dbee: выполнить файл/выделение" },
+		{ "<leader>De", execute_statement, ft = { "sql", "mysql", "plsql" }, desc = "Dbee: выполнить запрос под курсором" },
+		{ "<leader>DC", mark_call_log_clear, desc = "Dbee: очистить call log при следующем запуске" },
 		{
 			"<leader>DB",
 			function()
@@ -149,7 +203,18 @@ return {
 		require("dbee").setup({
 			sources = { require("dbee.sources").MemorySource:new(connections()) },
 			-- Ровно то, ради чего он тут: страницы тянутся из бэкенда по требованию.
-			result = { page_size = 200 },
+			-- focus_result = false: курсор остаётся в SQL, правка и перезапуск без прыжков.
+			result = { page_size = 200, focus_result = false },
+			extra_helpers = {
+				postgres = {
+					["Count"] = 'select count(*) from "{{ .Schema }}"."{{ .Table }}"',
+					["Size"] = "select pg_size_pretty(pg_total_relation_size('\"{{ .Schema }}\".\"{{ .Table }}\"'))",
+				},
+				sqlserver = {
+					["Count"] = "select count_big(*) from [{{ .Schema }}].[{{ .Table }}]",
+					["Size"] = "exec sp_spaceused '[{{ .Schema }}].[{{ .Table }}]'",
+				},
+			},
 		})
 	end,
 }
