@@ -1,6 +1,6 @@
 -- Таблица под курсором → TSV в "+": Excel/Google Sheets вставляют её ячейками.
 -- Форматы: markdown (| a | b |) и box-drawing (│ a │ b │) — второй печатают CLI и агенты.
--- HTML в буфер не кладём: OSC-52 и lemonade переносят только текст.
+-- Word/Outlook берут таблицу с рамками из HTML-формата буфера — его кладёт put() через Windows-помощник.
 local M = {}
 
 local BORDER = "┌├└┬┼┴─╞╪╘╒╔╠╚═"
@@ -46,6 +46,49 @@ local function continues(row, prev)
 	return prev and row[1] == "" and #row == #prev
 end
 
+local function html(rows)
+	local function esc(s)
+		return (s:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"))
+	end
+	local out = { '<table border="1" style="border-collapse:collapse">' }
+	for r, row in ipairs(rows) do
+		local tag = r == 1 and "th" or "td"
+		local tr = {}
+		for _, cell in ipairs(row) do
+			table.insert(tr, ("<%s>%s</%s>"):format(tag, esc(cell), tag))
+		end
+		table.insert(out, "<tr>" .. table.concat(tr) .. "</tr>")
+	end
+	table.insert(out, "</table>")
+	return table.concat(out)
+end
+
+-- Буфер Windows получает Text (TSV) + HTML через scripts/clip-html.ps1 на winhost.
+-- Помощник недоступен → только TSV через "+ (OSC 52 + lemonade): Excel всё равно берёт ячейки.
+-- "+ при успехе не пишем: асинхронная копия lemonade затёрла бы HTML-формат текстом.
+local function put(rows)
+	local tsv = vim.tbl_map(function(row)
+		return table.concat(row, "\t")
+	end, rows)
+	vim.fn.setreg('"', tsv, "l")
+	local payload = table.concat(tsv, "\n") .. "\n\0" .. html(rows)
+	vim.system(
+		{ "ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=3", "-W", "127.0.0.1:2490", "winhost" },
+		{ stdin = payload, timeout = 5000 },
+		vim.schedule_wrap(function(r)
+			if r.code == 0 and vim.trim(r.stdout or "") == "ok" then
+				vim.notify(("Таблица в буфере: %d строк (TSV + HTML)"):format(#rows))
+				return
+			end
+			vim.fn.setreg("+", tsv, "l")
+			-- Порт закрыт → Windows sshd отдаёт exit 0 и пустой ответ, поэтому проверяем именно "ok".
+			local reply = vim.trim((r.stdout or "") .. " " .. (r.stderr or ""))
+			local why = reply == "" and "помощник не отвечает на winhost:2490" or reply
+			vim.notify(("Таблица в буфере: %d строк (только TSV, clip-html: %s)"):format(#rows, why), vim.log.levels.WARN)
+		end)
+	)
+end
+
 function M.yank()
 	local lnum = vim.fn.line(".")
 	if not kind(vim.fn.getline(lnum)) then
@@ -84,14 +127,12 @@ function M.yank()
 		vim.notify("В таблице нет строк данных", vim.log.levels.WARN)
 		return
 	end
-	vim.fn.setreg(
-		"+",
-		vim.tbl_map(function(row)
-			return table.concat(vim.tbl_map(number, row), "\t")
-		end, rows),
-		"l"
-	)
-	vim.notify(("Таблица в буфере: %d строк (TSV)"):format(#rows))
+	for _, row in ipairs(rows) do
+		for i, cell in ipairs(row) do
+			row[i] = number(cell)
+		end
+	end
+	put(rows)
 end
 
 return M
