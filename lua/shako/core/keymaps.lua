@@ -78,3 +78,13 @@ keymap.set("n", "<C-n>", "<Nop>", { desc = "Disabled (vim-visual-multi conflict)
 
 -- Keymaps navigation
 -- <leader>fk — владелец snacks.picker (snacks.lua), дубль убран
+
+-- Markdown-таблица под курсором → TSV в системный буфер (вставка в Excel ячейками)
+vim.api.nvim_create_autocmd("FileType", {
+	pattern = "markdown",
+	callback = function(ev)
+		keymap.set("n", "<leader>my", function()
+			require("shako.md_table").yank()
+		end, { buffer = ev.buf, desc = "Yank md table as TSV" })
+	end,
+})
