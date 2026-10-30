@@ -42,8 +42,16 @@ return {
       -- Notifications & messages
       { "<leader>n",  group = "Notifications",       icon = "󰵟" },
 
+      -- Diagnostics, windows, LSP refactor
+      { "<leader>x",  group = "Diagnostics",         icon = "" },
+      { "<leader>w",  group = "Windows/Workspace",   icon = "" },
+      { "<leader>r",  group = "Rename/Restart LSP",  icon = "" },
+
+      -- Notes (telekasten)
+      { "<leader>z",  group = "Notes",               icon = "󰠮" },
+      { "<leader>uz", desc  = "Zen mode",            icon = "󰒃" },
+
       -- Misc (single-key groups — shown for clarity)
-      { "<leader>z",  desc  = "Zen mode",            icon = "󰒃" },
       { "<leader>lg", desc  = "LazyGit",             icon = "" },
     },
   },

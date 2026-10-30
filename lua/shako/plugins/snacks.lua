@@ -125,7 +125,7 @@ return {
 		{ "<leader>gb", function() Snacks.gitbrowse() end, desc = "Git browse in browser" },
 
 		-- Other snacks features
-		{ "<leader>z", function() Snacks.zen() end, desc = "Toggle zen mode" },
+		{ "<leader>uz", function() Snacks.zen() end, desc = "Toggle zen mode" },
 		{ "<leader>bd", function() Snacks.bufdelete() end, desc = "Delete buffer" },
 	},
 }
