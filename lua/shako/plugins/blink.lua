@@ -51,6 +51,12 @@ return {
       providers = {
         lazydev = { name = "LazyDev", module = "lazydev.integrations.blink", score_offset = 100 },
         dadbod = { name = "Dadbod", module = "vim_dadbod_completion.blink", score_offset = 50 },
+        -- postgres_lsp коннектится к базе и может молчать: меню SQL не ждёт его ответа.
+        lsp = {
+          async = function()
+            return vim.tbl_contains({ "sql", "mysql", "plsql", "sqlite" }, vim.bo.filetype)
+          end,
+        },
       },
     },
 

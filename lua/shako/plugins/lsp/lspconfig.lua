@@ -228,6 +228,7 @@ return {
       -- Корень — проектный jsonc или каталог базы из b:db, см. shako.pgls.
       if server == "postgres_lsp" then
         opts.root_dir = require("shako.pgls").root_dir
+        opts.cmd = require("shako.pgls").cmd()
       end
 
       -- The new Neovim 0.11+ API way:

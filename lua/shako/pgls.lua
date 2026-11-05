@@ -13,6 +13,16 @@ local state = vim.fn.stdpath("state") .. "/pgls"
 -- CONNECTION LIMIT 5 и read-only держит PostgreSQL. Пароль — shako.vault_pgpass.
 M.ro = { user = "nvim_ro", dbs = { bitrix24 = true, dwh_1c = true } }
 
+-- lsp-proxy не выходит по EOF в stdin: после смерти nvim он остаётся сиротой, держит
+-- сокет демона, а демон с --stop-on-disconnect держит пулы коннектов к базам.
+-- pdeathsig: ядро шлёт прокси SIGTERM при любом выходе nvim, включая SIGKILL.
+function M.cmd()
+	local server = "postgres-language-server"
+	if vim.fn.executable(server) == 1 and vim.fn.executable("setpriv") == 1 then
+		return { "setpriv", "--pdeathsig", "TERM", "--", server, "lsp-proxy" }
+	end
+end
+
 -- Каталог-корень для базы из URL; jsonc пишем, только если содержимое поменялось.
 -- linter и splinter выключены: миграции уже линтит squawk (nvim-lint), а splinter
 -- шлёт в базу свои проверки supabase. plpgsqlCheck требует расширение в базе.
@@ -55,7 +65,7 @@ end
 -- клиента не перецепит. Отцепляем старый и стартуем под новую базу.
 function M.attach(buf)
 	local cfg = vim.lsp.config.postgres_lsp
-	if not cfg or vim.fn.executable(cfg.cmd[1]) == 0 then
+	if not cfg or vim.fn.executable(cfg.cmd[#cfg.cmd - 1]) == 0 then
 		return
 	end
 	local old = vim.lsp.get_clients({ bufnr = buf, name = "postgres_lsp" })
@@ -63,15 +73,15 @@ function M.attach(buf)
 	M.root_dir(buf, function(dir)
 		new_id = vim.lsp.start(vim.tbl_extend("force", cfg, { root_dir = dir }), { bufnr = buf })
 	end)
-	-- Старого гасим после старта нового: stop асинхронный и при выходе клиента
-	-- отцепляет буфер, это задевает клиента, стартовавшего следом.
+	-- Старого отцепляем сразу: stop у сервера идёт 7-9 с, клиент всё это время
+	-- остаётся в буфере и не отвечает, а blink ждёт его до таймаута на каждую клавишу.
 	for _, client in ipairs(old) do
 		if client.id ~= new_id then
+			vim.lsp.buf_detach_client(buf, client.id)
 			-- Клиент без буферов держит пул коннектов к старой базе до выхода из nvim.
-			if vim.deep_equal(vim.tbl_keys(client.attached_buffers), { buf }) then
-				client:stop()
-			else
-				vim.lsp.buf_detach_client(buf, client.id)
+			-- Без таймаута прокси гасится 7-9 с; через 1 с nvim шлёт SIGTERM сам.
+			if vim.tbl_isempty(client.attached_buffers) then
+				client:stop(1000)
 			end
 		end
 	end
