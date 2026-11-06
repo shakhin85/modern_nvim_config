@@ -172,6 +172,9 @@ return {
 			-- Сессии из nvim видны в pg_stat_activity как nvim, а не psql: их легко найти
 			-- и прибить. libpq берёт PGAPPNAME, URL в dbs.local.lua не трогаем.
 			vim.env.PGAPPNAME = "nvim"
+			-- dadbod-completion на FileType зовёт psql синхронно. Без таймаута недоступный
+			-- хост держит nvim до таймаута TCP ОС (~2 мин), с ним — не дольше 5 с.
+			vim.env.PGCONNECT_TIMEOUT = "5"
 			-- Встроенный ftplugin/sql.vim вешает в insert <Left>/<Right> на
 			-- sqlcomplete#Drill* и пачку <C-C>…-маппингов: стрелки перестают двигать
 			-- курсор, <C-C> ждёт timeoutlen. Дополнение у нас — blink + dadbod.

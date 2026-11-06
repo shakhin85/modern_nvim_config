@@ -131,6 +131,42 @@ local function patch_omni(src)
   let s:cache[a:db].functions = map(sort(keys(names)), {i,fn -> {'word': fn, 'abbr': fn, 'menu': s:mark, 'info': 'Function', 'kind': 'F' }})
 ]]
 	)
+	-- Недоступная база: db#connect бросает исключение прямо из FileType, и оно
+	-- обрывает открытие буфера (в dbee — всё окно). Пустой url save_to_cache
+	-- пропускает: completion без схемы, буфер открывается.
+	src = replace_once(
+		src,
+		[[      let conn = db#connect(dbui.url)
+]],
+		[[      try
+        let conn = db#connect(dbui.url)
+      catch /^DB/
+        call vim_dadbod_completion#utils#msg(v:exception)
+      endtry
+]]
+	)
+	src = replace_once(
+		src,
+		[[    let db = db#connect(db#resolve(db))
+    call vim_dadbod_completion#utils#msg('Connecting to db...Done.')
+]],
+		-- dbee ставит filetype заметке дважды: без памяти о неудаче второй
+		-- FileType снова ждёт PGCONNECT_TIMEOUT. 60 с — потом пробуем заново.
+		[[    let resolved = db#resolve(db)
+    if localtime() - get(get(s:, 'shako_failed', {}), resolved, -999) < 60
+      let db = ''
+    else
+      try
+        let db = db#connect(resolved)
+        call vim_dadbod_completion#utils#msg('Connecting to db...Done.')
+      catch /^DB/
+        call vim_dadbod_completion#utils#msg(v:exception)
+        let s:shako_failed = extend(get(s:, 'shako_failed', {}), {resolved: localtime()})
+        let db = ''
+      endtry
+    endif
+]]
+	)
 	return replace_once(
 		src,
 		[[  if !empty(schema_scope)
