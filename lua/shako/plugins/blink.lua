@@ -50,7 +50,9 @@ return {
       },
       providers = {
         lazydev = { name = "LazyDev", module = "lazydev.integrations.blink", score_offset = 100 },
-        dadbod = { name = "Dadbod", module = "vim_dadbod_completion.blink", score_offset = 50 },
+        -- max_items режет сотни колонок широкой схемы до 50 лучших. async не ставится:
+        -- vim_dadbod_completion.blink зовёт omni синхронно, флаг ничего бы не дал.
+        dadbod = { name = "Dadbod", module = "vim_dadbod_completion.blink", score_offset = 50, max_items = 50 },
         -- postgres_lsp коннектится к базе и может молчать: меню SQL не ждёт его ответа.
         lsp = {
           async = function()

@@ -15,6 +15,12 @@ return {
           end,
           require_cwd = false,
         },
+        -- Зазор 20 символов между полем и алиасом: lua/shako/sql_align.lua.
+        sql_alias_pad = {
+          format = function(_, _, lines, callback)
+            callback(nil, require("shako.sql_align").pad_aliases(lines))
+          end,
+        },
       },
       formatters_by_ft = {
         javascript = { "prettier" },
@@ -32,9 +38,9 @@ return {
         python = { "ruff_format" },
         go = { "gofumpt" },
         toml = { "taplo" },
-        sql = { "sqlfluff" },
-        mysql = { "sqlfluff" },
-        plsql = { "sqlfluff" },
+        sql = { "sqlfluff", "sql_alias_pad" },
+        mysql = { "sqlfluff", "sql_alias_pad" },
+        plsql = { "sqlfluff", "sql_alias_pad" },
       },
       format_on_save = function(bufnr)
         -- Буферы dadbod-ui — это черновики запросов, а не исходники: переписывать их
@@ -44,17 +50,20 @@ return {
         if vim.b[bufnr].dbui_db_key_name or vim.startswith(vim.fs.normalize(vim.api.nvim_buf_get_name(bufnr)), notes) then
           return nil
         end
-        -- sqlfluff разбирает запрос ~1.2 с: с лимитом 1 с conform обрывал бы его.
-        local sql = vim.tbl_contains({ "sql", "mysql", "plsql" }, vim.bo[bufnr].filetype)
-        return { lsp_format = "fallback", async = false, timeout_ms = sql and 5000 or 1000 }
+        -- SQL не форматируется на :w: синхронный sqlfluff (~0.8 с) замораживал ввод.
+        -- SQL форматирует <leader>mp асинхронно.
+        if vim.tbl_contains({ "sql", "mysql", "plsql" }, vim.bo[bufnr].filetype) then
+          return nil
+        end
+        return { lsp_format = "fallback", timeout_ms = 1000 }
       end,
     })
 
     vim.keymap.set({ "n", "v" }, "<leader>mp", function()
       conform.format({
         lsp_format = "fallback",
-        async = false,
-        timeout_ms = 5000, -- ручной вызов: sqlfluff ~1.2 с
+        async = true, -- sqlfluff ~0.8 с не держит main thread
+        timeout_ms = 5000
       })
     end, { desc = "Format file or range (in visual mode)" })
   end,

@@ -148,6 +148,14 @@ return {
 			{ "<leader>Dc", export_csv, mode = { "n", "x" }, desc = "Export query result to CSV" },
 			{ "<leader>Do", function() require("shako.sql_ux").saved_queries() end, desc = "Saved queries (picker)" },
 			{ "<leader>DO", function() require("shako.sql_ux").grep_saved_queries() end, desc = "Grep saved queries" },
+			{ "<leader>Dk", function()
+				-- Команду создаёт ft-ленивый vim-dadbod-completion: до первого SQL-буфера её нет.
+				if vim.fn.exists(":DBCompletionClearCache") == 2 then
+					vim.cmd.DBCompletionClearCache()
+				else
+					vim.notify("dadbod-completion ещё не загружен: открой SQL-буфер", vim.log.levels.WARN)
+				end
+			end, desc = "Clear SQL completion cache (после DDL)" },
 			{ "<leader>Dv", inspect_result, mode = { "n", "x" }, desc = "Inspect result in visidata/csvlens" },
 			{
 				"<leader>Ds",
