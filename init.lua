@@ -36,36 +36,10 @@ end
 
 require("shako.lazy")
 
--- lemonade лежит в ~/go/bin: процессы herdr-сервера (popup prefix+e) PATH из .zshrc не видят
-local lemonade_bin = vim.fn.exepath("lemonade")
-if lemonade_bin == "" then
-	lemonade_bin = vim.fn.expand("~/go/bin/lemonade")
-end
-
-local function get_lemonade_cmd()
-	-- Проверяем WSL
-	local is_wsl = (vim.uv.os_uname().release or ""):lower():find("microsoft") ~= nil
-
-	if is_wsl then
-		-- WSL - получаем IP Windows хоста
-		local ip_handle = io.popen("ip route show | grep -i default | awk '{ print $3}'")
-		local windows_ip = ip_handle:read("*a"):gsub("%s+", "")
-		ip_handle:close()
-
-		return {
-			copy = string.format(lemonade_bin .. " --host=%s --port=2489 copy", windows_ip),
-			paste = string.format(lemonade_bin .. " --host=%s --port=2489 paste | sed 's/\\r$//'", windows_ip),
-		}
-	else
-		-- Нативный Linux
-		return {
-			copy = lemonade_bin .. " copy",
-			paste = lemonade_bin .. " paste",
-		}
-	end
-end
-
-local lemonade_cmd = get_lemonade_cmd()
+-- clip — клиент clipd (~/projects/clipd): буфер Windows WS-182 через ssh-туннель 127.0.0.1:2491.
+-- Абсолютный путь: процессы herdr-сервера (popup prefix+e) PATH из .zshrc не видят.
+local clip_bin = vim.fn.expand("~/.local/bin/clip")
+local has_clip = vim.fn.executable(clip_bin) == 1
 
 -- Clipboard configuration
 if vim.fn.has("win32") == 1 then
@@ -85,13 +59,12 @@ if vim.fn.has("win32") == 1 then
 -- popup herdr (prefix+e) HERDR_ENV не получает, только HERDR_ACTIVE_PANE_ID
 elseif vim.env.HERDR_ENV == "1" or vim.env.HERDR_ACTIVE_PANE_ID then
 	-- herdr-панель: OSC-52 доходит до буфера Windows через Herdr UI. В Warp+zj Warp OSC-52
-	-- теряет, а клиента из панели не видно — поэтому копию дублируем в lemonade (асинхронно:
-	-- туннель на 2489 может висеть). Paste: lemonade → последняя копия. OSC-52 в paste не зовём:
+	-- теряет, а клиента из панели не видно — поэтому копию дублируем в clip (асинхронно:
+	-- туннель может лежать). Paste: clip → последняя копия. OSC-52 в paste не зовём:
 	-- Herdr UI не отвечает на запрос буфера, и nvim висит на «Waiting for OSC 52 response».
 	local osc52 = require("vim.ui.clipboard.osc52")
-	local has_lemonade = vim.fn.executable(lemonade_bin) == 1
 	local last = {}
-	-- popup (prefix+e) закрывают сразу после yank: без ожидания nvim убивает lemonade до отправки
+	-- popup (prefix+e) закрывают сразу после yank: без ожидания nvim убивает clip до отправки
 	local pending_copy
 	vim.api.nvim_create_autocmd("VimLeavePre", {
 		callback = function()
@@ -105,15 +78,15 @@ elseif vim.env.HERDR_ENV == "1" or vim.env.HERDR_ACTIVE_PANE_ID then
 		return function(lines, regtype)
 			last[reg] = { lines, regtype }
 			osc(lines, regtype)
-			if has_lemonade then
-				pending_copy = vim.system({ "sh", "-c", lemonade_cmd.copy }, { stdin = table.concat(lines, "\n"), timeout = 2000 })
+			if has_clip then
+				pending_copy = vim.system({ clip_bin, "copy" }, { stdin = table.concat(lines, "\n"), timeout = 2000 })
 			end
 		end
 	end
 	local function paste(reg)
 		return function()
-			if has_lemonade then
-				local r = vim.system({ "sh", "-c", lemonade_cmd.paste }, { timeout = 1000 }):wait()
+			if has_clip then
+				local r = vim.system({ clip_bin, "paste" }, { timeout = 1000 }):wait()
 				if r.code == 0 and r.stdout ~= "" then
 					return vim.split((r.stdout:gsub("\r", "")), "\n")
 				end
@@ -122,23 +95,17 @@ elseif vim.env.HERDR_ENV == "1" or vim.env.HERDR_ACTIVE_PANE_ID then
 		end
 	end
 	vim.g.clipboard = {
-		name = "osc52+lemonade",
+		name = "osc52+clip",
 		copy = { ["+"] = copy("+"), ["*"] = copy("*") },
 		paste = { ["+"] = paste("+"), ["*"] = paste("*") },
 	}
-elseif vim.fn.executable(lemonade_bin) == 1 then
-	-- Linux: use lemonade (если нет — nvim сам подберёт xclip/wl-copy)
+elseif has_clip then
+	-- Linux вне Herdr (ssh из терминала): буфер Windows через clipd. Нет clip — nvim сам подберёт xclip/wl-copy.
 	vim.g.clipboard = {
-		name = "lemonade",
-		copy = {
-			["+"] = lemonade_cmd.copy,
-			["*"] = lemonade_cmd.copy,
-		},
-		paste = {
-			["+"] = lemonade_cmd.paste,
-			["*"] = lemonade_cmd.paste,
-		},
-		cache_enabled = 1,
+		name = "clipd",
+		copy = { ["+"] = { clip_bin, "copy" }, ["*"] = { clip_bin, "copy" } },
+		paste = { ["+"] = { clip_bin, "paste" }, ["*"] = { clip_bin, "paste" } },
+		cache_enabled = 0,
 	}
 end
 
