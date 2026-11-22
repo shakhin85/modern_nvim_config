@@ -163,6 +163,16 @@ return {
 			vim.fn.delete("/tmp/dbee-history", "rf")
 			vim.fn.delete(clear_marker)
 		end
+		-- Пути /tmp/dbee-* захардкожены в Go-бэкенде, файлы он создаёт с umask процесса (0664/0775):
+		-- тексты и результаты запросов видит любой пользователь хоста. Каталог 0700 закрывает
+		-- архив целиком; call log создаём заранее с 0600 — os.Create сохраняет права файла.
+		local history, calllog = "/tmp/dbee-history", "/tmp/dbee-calllog.json"
+		vim.fn.mkdir(history, "p", tonumber("700", 8))
+		vim.uv.fs_chmod(history, tonumber("700", 8))
+		if not vim.uv.fs_stat(calllog) then
+			vim.fn.writefile({ "{}" }, calllog)
+		end
+		vim.uv.fs_chmod(calllog, tonumber("600", 8))
 	end,
 	build = function()
 		require("dbee").install()

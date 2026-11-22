@@ -233,9 +233,14 @@ return {
 				},
 			}
 			-- Подключения — в git-ignored lua/shako/dbs.local.lua (см. dbs.local.lua.example)
-			local ok, dbs = pcall(dofile, vim.fn.stdpath("config") .. "/lua/shako/dbs.local.lua")
-			if ok and type(dbs) == "table" then
-				vim.g.dbs = dbs
+			local dbs_path = vim.fn.stdpath("config") .. "/lua/shako/dbs.local.lua"
+			if vim.uv.fs_stat(dbs_path) then
+				local ok, dbs = pcall(dofile, dbs_path)
+				if not ok then
+					vim.notify("dbs.local.lua: " .. tostring(dbs), vim.log.levels.ERROR)
+				elseif type(dbs) == "table" then
+					vim.g.dbs = dbs
+				end
 			end
 			-- sqlcmd от Microsoft (mssql-tools18) раньше go-sqlcmd из ~/go/bin: у go-sqlcmd
 			-- нет Kerberos, -E на Linux даёт «Login failed for user ''».
@@ -361,7 +366,7 @@ return {
 			{ "<leader>DG", "<cmd>GripToggle<CR>", desc = "Grip: toggle windows" },
 			{ "<leader>Dt", "<cmd>GripTables<CR>", desc = "Grip: table picker" },
 			{ "<leader>Dh", "<cmd>GripHistory<CR>", desc = "Grip: query history" },
-			{ "<leader>De", "<cmd>GripExplain<CR>", mode = { "n", "x" }, desc = "Grip: explain (Query Doctor)" },
+			{ "<leader>Di", "<cmd>GripExplain<CR>", mode = { "n", "x" }, desc = "Grip: explain (Query Doctor)" },
 			{ "<leader>Dp", "<cmd>GripProfile<CR>", desc = "Grip: profile table columns" },
 		},
 		opts = {
