@@ -249,8 +249,11 @@ return {
 			-- vim-dadbod-completion внутри fetch, то есть после первого sql-буфера.
 			-- Без этого :DB по postgres://-коннекту до него — «no adapter for postgres».
 			vim.g.db_adapter_postgres = "db#adapter#postgresql#"
-			-- Пароли PG — из Vault в PGPASSFILE (tmpfs), в URL их нет.
-			require("shako.vault_pgpass").sync()
+			-- Пароли PG — из Vault в PGPASSFILE (tmpfs), в URL их нет. Без коннектов
+			-- (нет dbs.local.lua, машина не сказки) в Vault не ходим: паролей брать не для кого.
+			if next(vim.g.dbs or {}) then
+				require("shako.vault_pgpass").sync()
+			end
 			vim.api.nvim_create_user_command("DbVaultRefresh", function()
 				require("shako.vault_pgpass").sync(true)
 			end, { desc = "Перечитать пароли БД из Vault" })
